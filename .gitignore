@@ -1,0 +1,17 @@
+# Credenziali — MAI versionare
+.env
+
+# Cartelle generate/runtime
+logs/
+screenshots/
+public/assets/bg/*.png
+public/assets/bg/*.jpg
+public/assets/bg/*.webp
+mockups/
+
+# CLI di test (solo locale)
+cli_*.php
+
+# Cache PHP
+__pycache__/
+*.pyc

@@ -1,0 +1,724 @@
+/* Battaglia — modello MULTI-ROUND (vita persistente, para/subisci). Vanilla JS. */
+'use strict';
+
+const $  = sel => document.querySelector(sel);
+const battleEl = $('.battle');
+const deckId   = parseInt(battleEl.dataset.deckId, 10) || 0;
+const startColor = (battleEl.dataset.color || '').toUpperCase();
+const CAMPAIGN = battleEl.dataset.campaign === '1';
+const MAGE_LIFE0 = parseInt(battleEl.dataset.mageLife, 10) || 10;
+const MANA_CAP   = parseInt(battleEl.dataset.manaCap, 10) || 10;
+
+const G = {
+  state: null,
+  round: 1,
+  hand: [],
+  budget: 0,
+  life: { player: MAGE_LIFE0, ai: MAGE_LIFE0 },
+  selectableLane: null,
+  lane1Attacker: null, // carta CPU che attacca la corsia 1 (per legalità del blocco)
+  aiHandCount: 6,
+  blindRevealed: false,
+};
+
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+function api(action, payload = {}) {
+  return fetch('/api/battle.php', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ action }, payload))
+  }).then(r => r.text()).then(text => {
+    let res;
+    try { res = JSON.parse(text); }
+    catch (e) {
+      console.error('[battle] risposta non-JSON dal server:', text);
+      return { ok: false, error: 'Risposta non valida dal server (vedi console).' };
+    }
+    if (res._warn) console.warn('[battle] warning PHP:', res._warn);
+    return res;
+  });
+}
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function kwIcons(c){let s='';if(+c.flying)s+='<span title="Volare">✈️</span>';if(+c.first_strike)s+='<span title="Attacco improvviso">⚡</span>';if(+c.deathtouch)s+='<span title="Tocco letale">☠️</span>';if(+c.trample)s+='<span title="Travolgere">🐗</span>';if(+c.double_strike)s+='<span title="Doppio attacco">⚔️</span>';if(+c.lifelink)s+='<span title="Legame vitale">💖</span>';if(+c.reach)s+='<span title="Raggiungere">🏹</span>';if(+c.defender)s+='<span title="Difensore">🧱</span>';return s;}
+function effT(c){ return (+c.toughness || 0) - (+c.wounds || 0); }   // costituzione efficace
+function ptHtml(c){ const w=(+c.wounds||0)>0; return `${c.power}/<span class="${w?'pt-wounded':''}">${effT(c)}</span>`; }
+function cardImg(c){if(!c||!c.image_url)return '';return `<img class="pc-img" loading="lazy" src="${c.image_url}" alt="${escapeHtml(c.name)}" onerror="this.parentNode.classList.add('noimg');this.remove();">`;}
+
+function coverHtml(c){
+  const k = kwIcons(c);
+  return `<div class="pc-cover">${k ? `<span class="kw">${k}</span>` : '<span class="vanilla">✦</span>'}</div>`;
+}
+function cardMarkup(c, extraClass = '') {
+  const isWounded = (+c.wounds || 0) > 0;
+  const overlay = isWounded ? `<span class="pc-pt-overlay pt-wounded">${c.power}/${effT(c)}</span>` : '';
+  return `<div class="play-card c-${c.colors || 'C'} ${extraClass}${isWounded ? ' wounded' : ''}">
+    ${cardImg(c)}
+    ${coverHtml(c)}
+    ${overlay}
+    <div class="pc-fallback">
+      <div class="pc-top"><span class="pc-name">${escapeHtml(c.name)}</span><span class="pc-cost">${c.mana_value}</span></div>
+      <div class="pc-pt">${ptHtml(c)}</div>
+      <div class="pc-kw">${kwIcons(c)}</div>
+    </div>
+  </div>`;
+}
+
+function setPrompt(t){ $('#prompt').textContent = t; }
+function renderMana(b){
+  const wrap = $('#mana-shards'); if (!wrap) return;
+  let h = '';
+  for (let i = 0; i < MANA_CAP; i++) h += '<span class="sh' + (i < b ? ' on' : '') + '"></span>';
+  wrap.innerHTML = h;
+}
+function setBudget(b){
+  G.budget = b;
+  const el = $('#budget'); if (el) el.textContent = b;
+  renderMana(b);
+}
+// Barra vita: il segmento perso lampeggia 3s, poi si ritrae fino al nuovo valore.
+function setMeter(side, life){
+  const fill = document.getElementById('meter-' + side);
+  const loss = document.getElementById('loss-' + side);
+  if (!fill) return;
+  const cap = MAGE_LIFE0 || 10;
+  const pct = v => Math.max(0, Math.min(100, v / cap * 100));
+  if (!G.lifeShown) G.lifeShown = {};
+  const prev = (G.lifeShown[side] != null) ? G.lifeShown[side] : life;
+  const newW = pct(life), prevW = pct(prev);
+  G.lifeShown[side] = life;
+  fill.style.width = newW + '%';
+
+  if (!loss) return;
+  if (life < prev) {
+    loss.style.left = newW + '%';
+    loss.style.width = (prevW - newW) + '%';
+    loss.style.opacity = '1';
+    loss.classList.add('flashing');
+    clearTimeout(loss._t);
+    loss._t = setTimeout(() => {
+      loss.classList.remove('flashing');
+      loss.style.opacity = '0';
+      loss.style.width = '0%';
+    }, 3000);
+  } else {
+    clearTimeout(loss._t);
+    loss.classList.remove('flashing');
+    loss.style.opacity = '0';
+    loss.style.width = '0%';
+  }
+}
+function setLife(){
+  const lp = $('#life-player'), la = $('#life-ai');
+  if (lp) lp.textContent = '❤️ ' + Math.max(0, G.life.player);
+  if (la) la.textContent = '❤️ ' + Math.max(0, G.life.ai);
+  setMeter('player', G.life.player);
+  setMeter('ai', G.life.ai);
+}
+function setRound(n){ G.round = n; const el = $('#round-tag'); if (el) el.textContent = 'Round ' + n; }
+
+// Doni (keyword) scelti ogni 3 round: 1 al giocatore, 1 diverso alla CPU.
+const BOON_ICON = { trample:'🐗', flying:'✈️', first_strike:'⚡', deathtouch:'☠️' };
+const BOON_NAME = { trample:'Travolgere', flying:'Volare', first_strike:'Attacco fulmineo', deathtouch:'Tocco letale' };
+const BOON_DESC = {
+  trample:'i danni in eccesso passano al mago',
+  flying:'evade le creature di terra',
+  first_strike:'colpisce per primo',
+  deathtouch:'uccide qualunque creatura tocchi',
+};
+
+/* Regola "una sola abilità": una creatura con 2+ keyword stampate ne usa SOLO una (scelta a mano).
+   I doni del round 3/6 (sopra) restano cumulabili e fanno eccezione. */
+const KW_KEYS = ['flying','first_strike','deathtouch','trample','double_strike','lifelink','reach','defender'];
+const KW_ICON = { flying:'✈️', first_strike:'⚡', deathtouch:'☠️', trample:'🐗', double_strike:'⚔️', lifelink:'💖', reach:'🏹', defender:'🧱' };
+const KW_NAME = { flying:'Volare', first_strike:'Attacco improvviso', deathtouch:'Tocco letale', trample:'Travolgere', double_strike:'Doppio attacco', lifelink:'Legame vitale', reach:'Raggiungere', defender:'Difensore' };
+function cardKeywords(c){ return KW_KEYS.filter(k => +c[k]); }
+function reduceCardClient(card, kw){ const c = Object.assign({}, card); KW_KEYS.forEach(k => { if (k !== kw) c[k] = false; }); return c; }
+// Mostra la scelta dell'abilità (riusa il pannello #boon-pick). Chiama onChosen(kw) alla scelta.
+function showKeywordChoice(card, onChosen){
+  const box = $('#boon-pick');
+  const kws = cardKeywords(card);
+  if (!box || kws.length < 2) { onChosen(null); return; }
+  box.innerHTML =
+    `<div class="bp-title">${escapeHtml(card.name)} ha più abilità — scegline UNA da usare</div>
+     <div class="bp-grid">` +
+    kws.map(k => `<button class="bp-card" data-k="${k}">
+        <span class="bp-ic">${KW_ICON[k]}</span><span class="bp-name">${KW_NAME[k]}</span>
+      </button>`).join('') +
+    `</div><div class="bp-note">Le altre si spengono per questa creatura (i doni del round 3/6 fanno eccezione).</div>`;
+  box.hidden = false;
+  box.querySelectorAll('.bp-card').forEach(b => b.onclick = () => { box.hidden = true; onChosen(b.dataset.k); });
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function applyBoons(){
+  const corr = document.querySelector('.corridor');
+  if (corr) corr.classList.toggle('empowered', G.round >= 3);
+  renderBoonMarks();
+}
+function setBoonMark(col, list){
+  let m = col.querySelector('.boon-mark');
+  if (!list || !list.length){ if (m) m.remove(); return; }
+  if (!m){ m = document.createElement('div'); m.className = 'boon-mark'; col.appendChild(m); }
+  m.innerHTML = list.map(k => `<span class="bi" title="${BOON_NAME[k]}: ${BOON_DESC[k]}">${BOON_ICON[k]}</span>`).join('');
+}
+function renderBoonMarks(){
+  document.querySelectorAll('.side-ai .lane-col').forEach(c => setBoonMark(c, G.aiBoons || []));
+  document.querySelectorAll('.side-player .lane-col').forEach(c => setBoonMark(c, G.playerBoons || []));
+}
+
+function renderAiHand() {
+  const wrap = $('#ai-hand');
+  wrap.innerHTML = '';
+  for (let i = 0; i < G.aiHandCount; i++) {
+    const b = document.createElement('div');
+    b.className = 'hand-back';
+    wrap.appendChild(b);
+  }
+}
+function aiPlayed() { if (G.aiHandCount > 0) G.aiHandCount--; renderAiHand(); }
+
+const COSTO_MINIMO = 1;
+function lanesRemainingAfter(){ if(G.selectableLane===0)return 2; if(G.selectableLane===1)return 1; return 0; }
+
+function canBlockClient(attacker, blocker){ return !(+attacker.flying && !+blocker.flying); }
+
+function renderHand() {
+  const wrap = $('#hand');
+  wrap.innerHTML = '';
+  const reserve = (G.selectableLane === null ? 0 : lanesRemainingAfter()) * COSTO_MINIMO;
+  const cards = [...G.hand].sort((a, b) => a.mana_value - b.mana_value || a.name.localeCompare(b.name));
+  const deal = G.dealNext;
+  cards.forEach((c, idx) => {
+    const div = document.createElement('div');
+    const affordable = c.mana_value <= (G.budget - reserve);
+    const wounded = (+c.wounds || 0) > 0 ? ' wounded' : '';
+    div.className = 'play-card hand-card c-' + (c.colors || 'C') + (affordable ? '' : ' unaffordable') + wounded + (deal ? ' dealing' : '');
+    if (deal) div.style.animationDelay = (idx * 0.09) + 's';
+    div.innerHTML = `${cardImg(c)}
+      <span class="hc-cost">${c.mana_value}</span>
+      <span class="hc-pt">${ptHtml(c)}</span>
+      <span class="hc-kw">${kwIcons(c)}</span>
+      <div class="pc-fallback">
+        <div class="pc-top"><span class="pc-name">${escapeHtml(c.name)}</span><span class="pc-cost">${c.mana_value}</span></div>
+        <div class="pc-pt">${ptHtml(c)}</div>
+        <div class="pc-kw">${kwIcons(c)}</div>
+      </div>`;
+    if (G.selectableLane !== null && affordable) {
+      div.classList.add('playable');
+      div.addEventListener('click', () => onPick(c));
+    }
+    wrap.appendChild(div);
+  });
+  G.dealNext = false; // l'animazione di pesca avviene solo a inizio round
+}
+
+function placeCard(lane, side, card, faceDown = false, animate = false) {
+  const slot = document.querySelector(`.slot[data-lane="${lane}"][data-side="${side}"]`);
+  if (!slot) return;
+  if (!faceDown && !card) { slot.innerHTML = slotRole(lane, side); return; } // passata: piazzola vuota col ruolo
+  slot.innerHTML = faceDown ? '<div class="play-card facedown"></div>' : cardMarkup(card, animate ? 'reveal' : '');
+}
+
+function badge(lane, side, text, cls) {
+  const slot = document.querySelector(`.slot[data-lane="${lane}"][data-side="${side}"] .play-card`);
+  if (!slot) return;
+  const b = document.createElement('span');
+  b.className = 'lane-badge ' + (cls || '');
+  b.textContent = text;
+  slot.appendChild(b);
+}
+
+// Rimuove per uid (id d'istanza): con 2 copie dello stesso id ne toglie UNA sola.
+function removeFromHand(uid){ const i=G.hand.findIndex(c=>(c.uid||c.id)===uid); if(i>=0)G.hand.splice(i,1); }
+
+function cpuThink(ms = 900, msg = '🤖 La CPU sta pensando…') {
+  setPrompt(msg);
+  const p = $('#prompt'); p.classList.add('thinking');
+  return new Promise(r => setTimeout(() => { p.classList.remove('thinking'); r(); }, ms));
+}
+
+/* Icone "ruolo" nelle piazzole vuote: lancia=attacco, scudo=difesa, doppia lancia=cieca. */
+const ICON_LANCE  = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L17 7"/><path d="M17 7l-5 .4"/><path d="M17 7l-.4 5"/></svg>';
+const ICON_LANCE2 = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L17 7"/><path d="M17 7l-5 .4"/><path d="M17 7l-.4 5"/><path d="M20 20L7 7"/><path d="M7 7l5 .4"/><path d="M7 7l.4 5"/></svg>';
+const ICON_SHIELD = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5L15.5 10"/></svg>';
+function slotRole(lane, side) {
+  if (lane === 2) return `<span class="slot-role attack" title="attacco alla cieca">${ICON_LANCE2}</span>`;
+  const attacker = (lane === 0 && side === 'player') || (lane === 1 && side === 'ai');
+  return attacker
+    ? `<span class="slot-role attack" title="attacca">${ICON_LANCE}</span>`
+    : `<span class="slot-role defend" title="difende">${ICON_SHIELD}</span>`;
+}
+
+function resetBoard() {
+  clearLaneChoice();
+  document.querySelectorAll('.slot').forEach(s => {
+    s.innerHTML = slotRole(+s.dataset.lane, s.dataset.side);
+  });
+  document.querySelectorAll('.lane-col').forEach(el => el.classList.remove('win-player', 'win-ai', 'draw'));
+  G.blindRevealed = false;
+}
+
+/* Mazzetto: conteggio + stato "vuoto". */
+function renderDeck(n) {
+  if (n != null) G.deckCount = n;
+  const c = document.getElementById('deck-count');
+  if (c) c.textContent = G.deckCount;
+  const pile = document.getElementById('deck-pile');
+  if (pile) pile.classList.toggle('empty', G.deckCount <= 0);
+}
+
+/* --- Scelta carta del giocatore --- */
+
+function onPick(card) {
+  // Se la carta ha 2+ abilità, prima scegli quale tenere; poi prosegui con la carta "ridotta".
+  const go = (chosen) => {
+    const c = chosen ? reduceCardClient(card, chosen) : card;
+    if (chosen) c._kw = chosen;
+    if (G.selectableLane === 1) showChoice(c);
+    else playLane(c, null);
+  };
+  if (cardKeywords(card).length >= 2) showKeywordChoice(card, go);
+  else go(null);
+}
+
+function clearLaneChoice() { document.querySelectorAll('.lane-choice').forEach(e => e.remove()); }
+function clearSlot(lane, side) {
+  const slot = document.querySelector(`.slot[data-lane="${lane}"][data-side="${side}"]`);
+  if (slot) slot.innerHTML = slotRole(lane, side);
+}
+
+// I pulsanti para/subisci appaiono SOPRA la carta scelta (corsia 1, lato giocatore),
+// così è chiaro che la scelta riguarda quella creatura.
+function showChoice(card) {
+  clearLaneChoice();
+  placeCard(1, 'player', card, false, true); // schiera (tentativo) la carta sulla corsia
+  const laneCol = document.querySelector('.side-player .lane-col[data-lane="1"]');
+  const legalBlock = canBlockClient(G.lane1Attacker, card);
+  setPrompt(legalBlock
+    ? `${card.name} schierato. Scegli sopra la carta: PARA (scontro) o SUBISCI (in faccia).`
+    : `${card.name} non può parare un volante: puoi solo SUBIRE.`);
+
+  const bar = document.createElement('div');
+  bar.className = 'lane-choice';
+  if (legalBlock) {
+    const para = document.createElement('button');
+    para.className = 'btn'; para.textContent = '🛡️ Para';
+    para.onclick = () => { clearLaneChoice(); playLane(card, 'BLOCK'); };
+    bar.appendChild(para);
+  }
+  const subisci = document.createElement('button');
+  subisci.className = 'btn primary'; subisci.textContent = '⚔️ Subisci';
+  subisci.onclick = () => { clearLaneChoice(); playLane(card, 'FACE'); };
+  bar.appendChild(subisci);
+  const annulla = document.createElement('button');
+  annulla.className = 'btn ghost'; annulla.textContent = '↩︎ Cambia';
+  annulla.onclick = () => { clearLaneChoice(); clearSlot(1, 'player'); setPrompt('Corsia 1: scegli una creatura e decidi.'); };
+  bar.appendChild(annulla);
+
+  laneCol.insertBefore(bar, laneCol.firstChild);
+}
+
+function showPass(){ const b = $('#pass-btn'); if (b) b.hidden = false; }
+function hidePass(){ const b = $('#pass-btn'); if (b) b.hidden = true; }
+
+// "Passa": non schieri nessuna carta su questa corsia e subisci l'eventuale attacco avversario.
+function passLane() {
+  const lane = G.selectableLane;
+  if (lane === null) return;
+  G.selectableLane = null;
+  clearLaneChoice();
+  hidePass();
+  clearSlot(lane, 'player');
+  const action = lane === 0 ? 'LANE0_PLAYER' : (lane === 1 ? 'LANE1_PLAYER' : 'LANE2_BLIND');
+  api(action, { pass: true }).then(res => {
+    if (!res.ok) { setPrompt('⚠️ ' + res.error); G.selectableLane = lane; renderHand(); showPass(); return; }
+    if (res.remaining_budget != null) setBudget(res.remaining_budget);
+    if (lane === 0) afterLane0(res);
+    else if (lane === 1) afterLane1(res);
+    else afterLane2(res);
+  });
+}
+
+function playLane(card, choice) {
+  const lane = G.selectableLane;
+  G.selectableLane = null;
+  clearLaneChoice();
+  hidePass();
+  const action = lane === 0 ? 'LANE0_PLAYER' : (lane === 1 ? 'LANE1_PLAYER' : 'LANE2_BLIND');
+  const payload = { card_id: card.uid || card.id }; // il server identifica la carta per uid (istanza)
+  if (choice) payload.choice = choice;
+  if (card._kw) payload.kw = card._kw; // abilità scelta (carte con 2+ keyword)
+
+  api(action, payload).then(res => {
+    if (!res.ok) { setPrompt('⚠️ ' + res.error); G.selectableLane = lane; renderHand(); return; }
+    removeFromHand(card.uid || card.id);
+    placeCard(lane, 'player', res.player_card || card, false, true);
+    if (lane === 1) badge(1, 'player', res.choice === 'BLOCK' ? 'PARA' : 'SUBISCE', res.choice === 'BLOCK' ? 'b-block' : 'b-face');
+    if (res.remaining_budget != null) setBudget(res.remaining_budget);
+    if (lane === 0) afterLane0(res);
+    else if (lane === 1) afterLane1(res);
+    else afterLane2(res);
+  });
+}
+
+/* --- Risoluzione CORSIA PER CORSIA (ogni corsia si conclude subito) --- */
+
+// Corsia 0: tu attacchi → la CPU difende → la corsia si risolve subito.
+async function afterLane0(res) {
+  await cpuThink(1000, '🤖 L\'avversario valuta la tua carta…');
+  if (res.ai_card) {
+    placeCard(0, 'ai', res.ai_card, false, true);
+    aiPlayed();
+    badge(0, 'ai', res.ai_choice === 'BLOCK' ? 'PARA' : 'SUBISCE', res.ai_choice === 'BLOCK' ? 'b-block' : 'b-face');
+  }
+  await animateLane(res.resolution);
+  if (res.state === 'DONE') { showFinal(res); return; }
+  // La CPU attacca la corsia 1.
+  await cpuThink(1000, '🤖 L\'avversario contrattacca sulla corsia 2…');
+  const r = await api('LANE1_AI');
+  if (!r.ok) { setPrompt('⚠️ ' + r.error); return; }
+  placeCard(1, 'ai', r.ai_card, false, true);
+  aiPlayed();
+  badge(1, 'ai', 'ATTACCA', 'b-atk');
+  advance(r);
+}
+
+// Corsia 1: tu difendi → la corsia si risolve subito.
+async function afterLane1(res) {
+  await animateLane(res.resolution);
+  if (res.state === 'DONE') { showFinal(res); return; }
+  advance(res); // -> LANE2_BLIND
+}
+
+// Corsia 2: alla cieca → si rivela e si risolve → fine round.
+async function afterLane2(res) {
+  await cpuThink(900, '🤖 L\'avversario scopre la carta alla cieca…');
+  if (res.ai_card) { placeCard(2, 'ai', res.ai_card, false, true); aiPlayed(); }
+  await animateLane(res.resolution);
+  if (res.state === 'DONE') { showFinal(res); return; }
+  showRoundEnd(res); // CONTINUE -> prossimo round
+}
+
+/* --- Setup delle azioni del giocatore --- */
+
+function advance(res) {
+  G.state = res.state;
+  $('#next-btn').hidden = true;
+  $('#choice-bar').hidden = true; clearLaneChoice();
+
+  switch (res.state) {
+    case 'LANE0_PLAYER':
+      setPrompt(res.prompt || '');
+      G.selectableLane = 0; renderHand();
+      break;
+    case 'LANE1_PLAYER':
+      G.lane1Attacker = res.ai_card;
+      setPrompt(res.prompt || '');
+      G.selectableLane = 1; renderHand();
+      break;
+    case 'LANE2_BLIND':
+      placeCard(2, 'ai', null, true);
+      setPrompt(res.prompt || '');
+      G.selectableLane = 2; renderHand();
+      break;
+  }
+  if (G.selectableLane !== null) showPass(); else hidePass();
+}
+
+// Anima la conclusione di UNA corsia: stat ridotte dei sopravvissuti, danni, morte, vita.
+function woundedCopy(card, dead, wound) {
+  return Object.assign({}, card, { wounds: (+card.wounds || 0) + (dead ? 0 : (wound || 0)) });
+}
+async function animateLane(l) {
+  if (!l) return;
+  setPrompt(`Piazzola ${l.lane + 1}: ${laneStory(l)}`);
+  const clash = !['FACE', 'FACE_FORCED', 'BLIND_PASS', 'PASS'].includes(l.mode);
+
+  if (l.player) {
+    placeCard(l.lane, 'player', woundedCopy(l.player, l.player_dead, l.player_wound));
+    cardFx(l.lane, 'player', l.dmg_ai, clash, l.player_dead);   // danno della TUA creatura al mago CPU
+  } else {
+    clearSlot(l.lane, 'player'); // hai passato: piazzola vuota
+  }
+  if (l.ai) {
+    placeCard(l.lane, 'ai', woundedCopy(l.ai, l.ai_dead, l.ai_wound));
+    cardFx(l.lane, 'ai', l.dmg_player, clash, l.ai_dead);       // danno della creatura CPU al tuo mago
+  }
+
+  G.life.player = l.player_life_after;
+  G.life.ai     = l.ai_life_after;
+  setLife();
+
+  const net = l.dmg_ai - l.dmg_player;
+  tintLane(l.lane, net > 0 ? 'win-player' : (net < 0 ? 'win-ai' : 'draw'));
+  await wait(1200);
+}
+
+function startNextRound(r) {
+  resetBoard();
+  applyBoons();
+  G.hand = r.hand;
+  G.dealNext = true;
+  renderDeck(r.player_deck_count);
+  G.aiHandCount = r.ai_hand_count;
+  setBudget(r.remaining_budget);
+  renderAiHand();
+  advance({ state: 'LANE0_PLAYER', prompt: r.prompt });
+}
+
+function showRoundEnd(r) {
+  hidePass();
+  setRound(r.round);
+  const fat = r.fatigue ? ` ⚡ Fatica −${r.fatigue} a entrambi i maghi.` : '';
+  setPrompt(`Round ${r.round - 1} concluso — vita 🧙 Tu ${Math.max(0, r.player_life)} · 🧙 CPU ${Math.max(0, r.ai_life)}.${fat}`);
+  const nextBtn = $('#next-btn');
+  nextBtn.hidden = false;
+  const pickPending = r.boon_pick && r.boon_pick.available && r.boon_pick.available.length;
+  const fireOnce = (fn) => () => {
+    if (nextBtn.disabled) return;
+    nextBtn.disabled = true;
+    nextBtn.hidden = true;
+    fn();
+  };
+  if (pickPending) {
+    nextBtn.textContent = `🎁 Round ${r.round}: scegli il dono`;
+    nextBtn.onclick = fireOnce(() => openBoonPick(r));
+  } else {
+    nextBtn.textContent = `▶️ Inizia il Round ${r.round}`;
+    nextBtn.onclick = fireOnce(() => startNextRound(r));
+  }
+  nextBtn.disabled = false;
+}
+
+/* --- Scelta del dono (ogni 3 round) --- */
+function openBoonPick(r) {
+  const box = $('#boon-pick');
+  if (!box) { startNextRound(r); return; }
+  const avail = r.boon_pick.available;
+  box.innerHTML =
+    `<div class="bp-title">Round ${r.round} — scegli un dono per le tue creature</div>
+     <div class="bp-grid">` +
+    avail.map(k => `<button class="bp-card" data-k="${k}">
+        <span class="bp-ic">${BOON_ICON[k]}</span>
+        <span class="bp-name">${BOON_NAME[k]}</span>
+        <span class="bp-desc">${BOON_DESC[k]}</span>
+      </button>`).join('') +
+    `</div><div class="bp-note">La CPU ne prenderà uno diverso.</div>`;
+  box.hidden = false;
+  box.querySelectorAll('.bp-card').forEach(b => b.onclick = () => pickBoon(b.dataset.k, r));
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function pickBoon(kw, r) {
+  const box = $('#boon-pick');
+  box.querySelectorAll('.bp-card').forEach(b => b.disabled = true);
+  api('PICK_BOON', { keyword: kw }).then(res => {
+    if (!res.ok) { setPrompt('⚠️ ' + res.error); box.querySelectorAll('.bp-card').forEach(b => b.disabled = false); return; }
+    G.playerBoons = res.player_boons || [];
+    G.aiBoons = res.ai_boons || [];
+    const aiTxt = res.ai_pick ? `${BOON_ICON[res.ai_pick]} ${BOON_NAME[res.ai_pick]}` : '—';
+    box.innerHTML =
+      `<div class="bp-title">Doni assegnati</div>
+       <div class="bp-reveal">
+         <div><span class="bp-side">Tu</span> ${BOON_ICON[kw]} ${BOON_NAME[kw]}</div>
+         <div><span class="bp-side foe">CPU</span> ${aiTxt}</div>
+       </div>
+       <button class="btn primary" id="bp-go">▶️ Inizia il Round ${r.round}</button>`;
+    $('#bp-go').onclick = () => { box.hidden = true; startNextRound(r); };
+  });
+}
+
+/* --- Esito finale --- */
+
+function showFinal(res) {
+  hidePass();
+  const box = $('#result');
+  box.hidden = false;
+  let title, cls;
+  if (res.outcome === 'PLAYER') { title = '🏆 Vittoria!'; cls = 'win'; }
+  else if (res.outcome === 'AI') { title = '💀 Sconfitta'; cls = 'lose'; }
+  else { title = '🤝 Pareggio'; cls = 'draw'; }
+
+  const reasons = {
+    ko: 'KO sul campo',
+    deckout_player: 'sei rimasto senza creature (deck-out)',
+    deckout_ai: 'la CPU è rimasta senza creature (deck-out)',
+    fatigue: 'fatica: i maghi hanno ceduto (nessuno chiudeva)',
+  };
+  const why = reasons[res.reason] || '';
+
+  const scoreHtml = `
+    <p class="result-score">
+      Round giocati: <strong>${res.round}</strong> · ${escapeHtml(why)}<br>
+      Vita finale — 🧙 Tu <strong>${Math.max(0, res.player_life)}</strong> · 🧙 CPU <strong>${Math.max(0, res.ai_life)}</strong>
+    </p>`;
+
+  if (CAMPAIGN) {
+    box.innerHTML = `<div class="result-banner ${cls}">${title}</div>${scoreHtml}
+      <div class="result-actions"><span class="hint">Aggiorno la valle…</span></div>`;
+    setPrompt('Battaglia conclusa.');
+    box.scrollIntoView({ behavior: 'smooth' });
+    fetch('/api/campaign.php', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'FINISH', outcome: res.outcome, round: res.round }),
+    }).then(r => r.json()).then(cv => {
+      const won = res.outcome === 'PLAYER';
+      const actions = won
+        ? `<a class="btn primary" href="/campaign.php">🎁 Bottino — pesca una carta</a>`
+        : `<button class="btn primary" onclick="location.reload()">↻ Riprova la battaglia</button>
+           <a class="btn" href="/campaign.php">🏔 Torna alla valle</a>`;
+      box.querySelector('.result-actions').innerHTML = actions;
+    }).catch(() => {
+      box.querySelector('.result-actions').innerHTML =
+        `<a class="btn primary" href="/campaign.php">🏔 Torna alla valle</a>`;
+    });
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="result-banner ${cls}">${title}</div>${scoreHtml}
+    <div class="result-actions">
+      <button class="btn primary" onclick="location.reload()">↻ Rivincita</button>
+      <a class="btn" href="/index.php">← Home</a>
+    </div>`;
+  setPrompt('Battaglia conclusa.');
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ─── Screenshot 9:16 ────────────────────────────────────────────────────────
+
+(function initScreenshot() {
+  const btn   = document.getElementById('screenshot-btn');
+  const toast = document.getElementById('screenshot-toast');
+  if (!btn) return;
+
+  function showToast(msg, ms = 3000) {
+    toast.textContent = msg;
+    toast.hidden = false;
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { toast.hidden = true; }, ms);
+  }
+
+  btn.addEventListener('click', async () => {
+    if (!window.html2canvas) {
+      showToast('⏳ Carico il renderer…');
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+
+    btn.classList.add('loading');
+    btn.textContent = '⏳ Cattura…';
+    showToast('📷 Cattura in corso…', 8000);
+
+    try {
+      // Cattura il solo .board (il campo da gioco) per evitare UI sopra/sotto
+      const target = document.querySelector('.battle') || document.body;
+      const raw    = await html2canvas(target, {
+        backgroundColor: '#080510',
+        useCORS: true,
+        allowTaint: false,
+        scale: 1,
+        logging: false,
+      });
+
+      // Ritaglia / letterbox a 9:16
+      const W = 1080, H = 1920;
+      const out = document.createElement('canvas');
+      out.width = W; out.height = H;
+      const ctx = out.getContext('2d');
+      ctx.fillStyle = '#080510';
+      ctx.fillRect(0, 0, W, H);
+
+      const rw = raw.width, rh = raw.height;
+      const scale = Math.max(W / rw, H / rh);
+      const dw = rw * scale, dh = rh * scale;
+      ctx.drawImage(raw, (W - dw) / 2, (H - dh) / 2, dw, dh);
+
+      // Upload come blob
+      const blob = await new Promise(r => out.toBlob(r, 'image/jpeg', 0.88));
+      const fd   = new FormData();
+      fd.append('shot', blob, 'screenshot.jpg');
+      fd.append('round', String(G.round));
+      fd.append('deck_id', String(deckId));
+
+      const resp = await fetch('/screenshot_upload.php', { method: 'POST', body: fd });
+      const json = await resp.json();
+
+      if (json.ok) {
+        showToast('✅ Screenshot inviato! Grazie 🙏', 4000);
+      } else {
+        showToast('⚠️ ' + (json.error || 'Errore upload'), 4000);
+      }
+    } catch (e) {
+      console.error('[screenshot]', e);
+      showToast('❌ Cattura fallita — riprova', 3000);
+    } finally {
+      btn.classList.remove('loading');
+      btn.textContent = '📷 Screenshot';
+    }
+  });
+})();
+
+function laneStory(l) {
+  if (l.mode === 'BLOCK') return 'parata: le creature si scontrano';
+  if (l.mode === 'BLOCK_TRAMPLE') return 'parata, ma l\'eccesso passa in faccia';
+  if (l.mode === 'BLIND_CLASH') return 'stesso volo: scontro, l\'eccesso va in faccia';
+  if (l.mode === 'BLIND_PASS')  return 'volo asimmetrico: si superano, colpi diretti in faccia';
+  if (l.mode === 'PASS')        return 'hai passato: subisci il colpo avversario';
+  if (l.mode === 'FACE_FORCED') return 'volante: colpo in faccia inevitabile';
+  return 'colpi in faccia';
+}
+
+/** Effetti di risoluzione: mostra il danno che la creatura ha inflitto al MAGO avversario + morte. */
+function cardFx(lane, side, mageDmg, clash, dead) {
+  const el = document.querySelector(`.slot[data-lane="${lane}"][data-side="${side}"] .play-card`);
+  if (!el) return;
+  el.classList.add(clash ? 'clashing' : 'attacking');
+  if (mageDmg > 0) {
+    const n = document.createElement('div');
+    n.className = 'dmg-big to-mage';
+    const arrow = side === 'player' ? '↑' : '↓';
+    n.innerHTML = `<span class="dmg-arrow">${arrow}</span>${mageDmg}`;
+    el.appendChild(n);
+  }
+  if (dead) el.classList.add('dead');
+}
+function tintLane(lane, cls) {
+  document.querySelectorAll(`.lane-col[data-lane="${lane}"]`).forEach(el => {
+    el.classList.remove('win-player', 'win-ai', 'draw');
+    el.classList.add(cls);
+  });
+}
+
+/* --- Avvio --- */
+
+function start() {
+  const pb = $('#pass-btn'); if (pb) pb.onclick = passLane;
+  const payload = CAMPAIGN ? { from_campaign: true }
+                : deckId ? { deck_id: deckId }
+                : (startColor ? { color: startColor } : null);
+  if (!payload) { setPrompt('Nessun mazzo o colore selezionato. Torna alla home.'); return; }
+  api('START', payload).then(res => {
+    if (!res.ok) { setPrompt('⚠️ ' + res.error); return; }
+    G.hand = res.hand;
+    G.dealNext = true;
+    renderDeck(res.player_deck_count ?? 0);
+    setBudget(res.remaining_budget);
+    G.life = { player: res.player_life ?? res.mage_life, ai: res.ai_life ?? res.mage_life };
+    setLife();
+    setRound(res.round || 1);
+    G.playerBoons = res.player_boons || [];
+    G.aiBoons = res.ai_boons || [];
+    applyBoons();
+    G.aiHandCount = res.ai_hand_count || 6;
+    renderAiHand();
+    advance(res);
+  });
+}
+
+start();

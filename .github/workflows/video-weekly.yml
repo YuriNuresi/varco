@@ -1,0 +1,85 @@
+name: Varco — Weekly Short
+
+# Pubblica uno short verticale su YouTube ogni lunedì alle 07:00 ora italiana.
+# Usa game-video-studio come submodule (cartella video_studio/).
+#
+# Secret da configurare in questo repo (Settings → Secrets):
+#   MANIFEST_BASE    = https://varco.portale3d.it/video_manifest.php
+#   MANIFEST_SECRET  = <stessa chiave in magic/.env MANIFEST_SECRET>
+#   YT_CLIENT_ID     = OAuth client id YouTube
+#   YT_CLIENT_SECRET = OAuth client secret YouTube
+#   YT_REFRESH_TOKEN = refresh token YouTube (ottieni con video_studio/youtube_auth.py)
+#
+# Variabile repo opzionale (Settings → Variables):
+#   YT_PRIVACY = public   (default: unlisted — toglilo solo quando sei pronto a pubblicare)
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+on:
+  workflow_dispatch:
+    inputs:
+      lang:
+        description: "Lingua (it / en)"
+        required: false
+        default: "it"
+      valley:
+        description: "Valle forzata (W/U/B/R/G, vuoto = rotazione settimanale)"
+        required: false
+        default: ""
+  schedule:
+    - cron: "0 5 * * 1"   # ogni lunedì 05:00 UTC = ~07:00 ora italiana
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    env:
+      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Installa ffmpeg + font
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-liberation
+
+      - name: Installa dipendenze Python
+        run: pip install -r video_studio/requirements.txt
+
+      - name: Render video
+        env:
+          MANIFEST_BASE:   ${{ secrets.MANIFEST_BASE }}
+          MANIFEST_SECRET: ${{ secrets.MANIFEST_SECRET }}
+          LANG_CODE:       ${{ github.event.inputs.lang }}
+          VALLEY:          ${{ github.event.inputs.valley }}
+        run: |
+          LANG_CODE="${LANG_CODE:-it}"
+          URL="${MANIFEST_BASE}?latest=1&lang=${LANG_CODE}&secret=${MANIFEST_SECRET}"
+          [ -n "$VALLEY" ] && URL="${URL}&valley=${VALLEY}"
+          python video_studio/render_video.py "$URL"
+
+      - name: Salva come artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: varco-short-${{ github.run_id }}
+          path: out/*.mp4
+          if-no-files-found: error
+
+      - name: Installa dipendenze YouTube
+        if: ${{ env.YT_REFRESH_TOKEN != '' }}
+        run: pip install -r video_studio/requirements-youtube.txt
+
+      - name: Pubblica su YouTube
+        if: ${{ env.YT_REFRESH_TOKEN != '' }}
+        env:
+          YT_CLIENT_ID:     ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_PRIVACY:       ${{ vars.YT_PRIVACY }}
+        run: python video_studio/youtube_upload.py

@@ -1,0 +1,3 @@
+[submodule "video_studio"]
+	path = video_studio
+	url = https://github.com/YuriNuresi/game-video-studio.git
