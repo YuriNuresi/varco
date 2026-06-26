@@ -103,16 +103,16 @@ function approved_url(array &$shotFiles, string $baseUrl, string $key): ?string 
     $f = array_shift($shotFiles);
     if (!$f) return null;
     // Serviti via tools/screenshots.php (stesso gate dell'admin)
-    return $baseUrl . '/magic/public/tools/screenshots.php?key=' . urlencode($key) . '&img=approved/' . basename($f);
+    return $baseUrl . '/tools/screenshots.php?key=' . urlencode($key) . '&img=approved/' . basename($f);
 }
 
 function bg_url(array &$bgFiles, string $baseUrl, string $fallback): string {
     $f = array_shift($bgFiles);
     if ($f) {
         $rel = '/assets/bg/' . basename($f);
-        return $baseUrl . '/magic/public' . $rel;
+        return $baseUrl . $rel;
     }
-    return $baseUrl . '/magic/public/assets/bg/' . $fallback;
+    return $baseUrl . '/assets/bg/' . $fallback;
 }
 
 // ── Testi dello storyboard (no-spoiler: evoca, non racconta) ─────────────────
@@ -167,25 +167,67 @@ if ($lang === 'en') {
     ];
 }
 
-// Shot 1-3: tre carte rappresentative
+// ── Voce fuori campo: Groq genera frasi cinematiche sulla valle ───────────────
+function groq_vo(string $valleyName, string $tribe, string $lang, array $abilities): array {
+    $apiKey = env('GROQ_API_KEY', '');
+    if ($apiKey === '') return [];
+
+    $abilList = $abilities ? implode(', ', array_unique($abilities)) : '';
+    $abilitiesHint = $abilList ? "Le creature hanno abilità come: {$abilList}." : '';
+
+    if ($lang === 'en') {
+        $prompt = "Write exactly 3 short voiceover lines for a 9:16 game trailer about '{$valleyName}' ({$tribe} creatures). {$abilitiesHint} Rules: no card names, no spoilers, cinematic and evocative, max 12 words each, present tense. Return only the 3 lines separated by newlines, nothing else.";
+    } else {
+        $prompt = "Scrivi esattamente 3 brevi frasi di voce fuori campo per un trailer 9:16 del luogo '{$valleyName}' (creature di tipo {$tribe}). {$abilitiesHint} Regole: niente nomi di carte, niente spoiler, stile cinematico ed evocativo, massimo 12 parole per frase, tempo presente. Rispondi solo con le 3 frasi separate da a capo, nient'altro.";
+    }
+
+    $payload = json_encode([
+        'model'    => 'meta-llama/llama-4-scout-17b-16e-instruct',
+        'messages' => [['role' => 'user', 'content' => $prompt]],
+        'max_tokens' => 120,
+        'temperature' => 0.8,
+    ]);
+
+    $ctx  = stream_context_create(['http' => [
+        'method'  => 'POST',
+        'header'  => "Content-Type: application/json\r\nAuthorization: Bearer {$apiKey}\r\n",
+        'content' => $payload,
+        'timeout' => 20,
+    ]]);
+    $resp = @file_get_contents('https://api.groq.com/openai/v1/chat/completions', false, $ctx);
+    if (!$resp) return [];
+
+    $data = json_decode($resp, true);
+    $text = trim($data['choices'][0]['message']['content'] ?? '');
+    if (!$text) return [];
+
+    $lines = array_values(array_filter(array_map('trim', explode("\n", $text))));
+    return array_slice($lines, 0, 3);
+}
+
+// Raccogli abilità uniche dalle carte per dare contesto a Groq
+$allAbilities = [];
+foreach ($cards as $c) {
+    if ($lang === 'en') { $ab = abilities_en($c); } else { $ab = abilities_it($c); }
+    if ($ab) foreach (explode(', ', $ab) as $a) $allAbilities[] = trim($a);
+}
+
+$groqLines = groq_vo($meta['name_it'], $tribe, $lang, $allAbilities);
+
+// Fallback se Groq non risponde
+$fallbackLines = $lang === 'en'
+    ? ["Every creature has its role. Every move, its price.", "Power or speed? Here, you choose.", "The arena awaits. Will you rise?"]
+    : ["Ogni creatura ha il suo ruolo. Ogni mossa, il suo prezzo.", "Forza o velocità? Qui decidi tu.", "L'arena ti aspetta. Sarai all'altezza?"];
+$voLines = count($groqLines) >= 3 ? $groqLines : $fallbackLines;
+
+// Shot 1-3: immagine carta + voce cinematica (senza nominare la carta)
 $showcards = array_slice($cards, 0, 3);
 foreach ($showcards as $i => $card) {
     $img = $card['image_url'] ?: ($imgPool[$i] ?? bg_url($bgFiles, $baseUrl, 'arena.png'));
-    $ab  = $lang === 'en' ? abilities_en($card) : abilities_it($card);
-    $mv  = (int) $card['mana_value'];
-    $pw  = (int) $card['power'];
-    $th  = (int) $card['toughness'];
-    $rar = $lang === 'en' ? $card['rarity'] : rarity_it($card['rarity']);
-
-    if ($lang === 'en') {
-        $ab_text = $ab ? " {$ab}." : '';
-        $vo = "{$card['name']}: {$mv} mana, {$pw}/{$th}.{$ab_text} A {$rar} card worth playing.";
-    } else {
-        $ab_text = $ab ? " {$ab}." : '';
-        $vo = "{$card['name']}: {$mv} mana, {$pw}/{$th}.{$ab_text} Una carta {$rar} da giocare.";
-    }
+    $vo  = $voLines[$i] ?? $fallbackLines[$i];
     $shots[] = ['image' => $img, 'vo' => $vo];
 }
+
 
 // Shot 4: chiusura — altro screenshot utente o background
 $bgFinal = approved_url($shotFiles, $baseUrl, $manifestSecret) ?? bg_url($bgFiles, $baseUrl, 'campaign.jpg');
@@ -215,22 +257,23 @@ function jamendo_track(string $valley, array $tagMap): ?string {
     $clientId = env('JAMENDO_CLIENT_ID', '');
     if ($clientId === '') return null;
 
-    $tags = $tagMap[$valley] ?? 'epic+fantasy';
-    $url  = "https://api.jamendo.com/v3.0/tracks/?client_id={$clientId}"
-          . "&format=json&limit=10&tags={$tags}&audioformat=mp31&include=musicinfo"
-          . "&boost=popularity_week&license_cc=0";  // include anche CC BY
-
-    $ctx  = stream_context_create(['http' => ['timeout' => 15]]);
-    $resp = @file_get_contents($url, false, $ctx);
-    if (!$resp) return null;
-
-    $data   = json_decode($resp, true);
-    $tracks = $data['results'] ?? [];
-    if (!$tracks) return null;
-
-    // Pesca una traccia a caso tra le prime 10 più popolari
-    $track = $tracks[array_rand($tracks)];
-    return $track['audio'] ?? null;  // URL diretto mp3
+    $tags = $tagMap[$valley] ?? 'epic';
+    // Prova prima con tag specifici, poi con tag generico se vuoto
+    foreach ([$tags, 'epic', 'fantasy', 'ambient'] as $t) {
+        $url  = "https://api.jamendo.com/v3.0/tracks/?client_id={$clientId}"
+              . "&format=json&limit=20&tags={$t}&audioformat=mp31"
+              . "&boost=popularity_week&order=popularity_week";
+        $ctx  = stream_context_create(['http' => ['timeout' => 20]]);
+        $resp = @file_get_contents($url, false, $ctx);
+        if (!$resp) continue;
+        $data   = json_decode($resp, true);
+        $tracks = array_filter($data['results'] ?? [], fn($r) => !empty($r['audio']));
+        if ($tracks) {
+            $track = $tracks[array_rand($tracks)];
+            return $track['audio'];
+        }
+    }
+    return null;
 }
 
 $musicUrl = jamendo_track($valley, $JAMENDO_TAGS);
@@ -258,10 +301,10 @@ $manifest = [
     'game_name'   => 'Varco',
     'output'      => 'varco_' . strtolower($valley) . '_' . date('Ymd') . '.mp4',
     'lang'        => $lang,
-    'logo'        => $baseUrl . '/magic/public/assets/bg/gate.png', // usa il portale come logo provvisorio
+    'logo'        => $baseUrl . '/assets/bg/gate.png',
     'music'       => $musicUrl,
     'cta'         => $cta,
-    'outro_image' => $baseUrl . '/magic/public/assets/bg/campaign.jpg',
+    'outro_image' => $baseUrl . '/assets/bg/campaign.jpg',
     'shots'       => $shots,
 ];
 
