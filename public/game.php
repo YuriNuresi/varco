@@ -116,5 +116,5 @@ function slot_role_html(int $lane, string $side): string {
 <?php endif; ?>
 </section>
 
-<script src="/assets/app.js?v=overlay3"></script>
+<script src="/assets/app.js?v=overlay4"></script>
 <?php require __DIR__ . '/partials/footer.php'; ?>

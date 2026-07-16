@@ -162,7 +162,6 @@ function showKeywordChoice(card, onChosen){
     `</div><div class="bp-note">Le altre si spengono per questa creatura (i doni del round 3/6 fanno eccezione).</div>`;
   box.hidden = false;
   box.querySelectorAll('.bp-card').forEach(b => b.onclick = () => { box.hidden = true; onChosen(b.dataset.k); });
-  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 function applyBoons(){
   const corr = document.querySelector('.corridor');
@@ -534,7 +533,6 @@ function openBoonPick(r) {
     `</div><div class="bp-note">La CPU ne prenderà uno diverso.</div>`;
   box.hidden = false;
   box.querySelectorAll('.bp-card').forEach(b => b.onclick = () => pickBoon(b.dataset.k, r));
-  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function pickBoon(kw, r) {

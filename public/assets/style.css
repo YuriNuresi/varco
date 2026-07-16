@@ -370,10 +370,11 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.5);transform:non
   box-shadow:0 0 0 1.5px var(--gold),0 0 12px rgba(196,162,89,.35);animation:boon-pulse 1.8s ease-in-out infinite}
 @keyframes boon-pulse{50%{box-shadow:0 0 0 1.5px var(--gold-bright),0 0 18px rgba(236,210,141,.5)}}
 
-/* pannello scelta del dono */
-.boon-pick{margin:.7rem auto 0;max-width:560px;position:relative;z-index:3;text-align:center;
-  background:linear-gradient(180deg,rgba(26,18,48,.96),rgba(12,8,24,.97));border-radius:10px;padding:1rem 1.1rem;
-  box-shadow:0 0 0 1px var(--gold-line),0 0 0 4px rgba(8,5,16,.5),0 18px 40px rgba(0,0,0,.6)}
+/* pannello scelta dono/abilità: OVERLAY fisso centrato (in-flow allungava il corridoio e sfalsava il layout) */
+.boon-pick{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:70;text-align:center;
+  width:min(560px,92vw);max-height:86vh;overflow:auto;margin:0;
+  background:linear-gradient(180deg,rgba(26,18,48,.98),rgba(12,8,24,.99));border-radius:10px;padding:1rem 1.1rem;
+  box-shadow:0 0 0 1px var(--gold-line),0 0 0 4px rgba(8,5,16,.5),0 0 0 100vmax rgba(8,5,16,.55),0 18px 40px rgba(0,0,0,.6)}
 .bp-title{font-family:"Cinzel",serif;letter-spacing:.1em;color:var(--gold-bright);font-size:.95rem;margin-bottom:.8rem}
 .bp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px}
 .bp-card{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:.85rem .5rem;border-radius:8px;
@@ -546,9 +547,13 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.5);transform:non
   border:1px solid var(--gold-line,var(--line));border-radius:10px;
   box-shadow:0 0 0 4px rgba(8,5,16,.5),0 18px 40px rgba(0,0,0,.6)}
 .choice-bar .btn{width:100%;text-align:center}
-.lane-choice{display:flex;flex-direction:column;gap:.4rem;margin-bottom:.5rem;padding:.5rem;
-  background:linear-gradient(180deg,rgba(26,18,48,.9),rgba(12,8,24,.9));
-  border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.5)}
+/* Para/Subisci: OVERLAY sopra la carta della corsia (in-flow sfalsava tutto il layout sotto) */
+.lane-choice{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;
+  width:max-content;min-width:118px;max-width:94%;
+  display:flex;flex-direction:column;gap:.4rem;margin:0;padding:.5rem;
+  background:linear-gradient(180deg,rgba(26,18,48,.96),rgba(12,8,24,.97));
+  border:1px solid var(--gold);border-radius:8px;
+  box-shadow:0 0 0 3px rgba(8,5,16,.55),0 10px 26px rgba(0,0,0,.65)}
 .lane-choice .btn{width:100%;text-align:center;font-size:.74rem;padding:.45rem .3rem}
 
 /* badge sulle carte in corsia */

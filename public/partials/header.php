@@ -22,7 +22,7 @@ if (is_file($faroTrack)) { require_once $faroTrack; faro_track('varco'); }
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Grenze+Gotisch:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/style.css?v=overlay5">
+    <link rel="stylesheet" href="/assets/style.css?v=overlay6">
     <!-- Faro: analytics cross-game -->
     <script src="https://portale3d.it/faro/sdk.js" data-app="varco" data-endpoint="https://portale3d.it/faro/collect.php"></script>
     <script>window.faro && faro.track('app_open');</script>
