@@ -20,18 +20,46 @@ function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;',
 function kwIcons(c){let s='';if(+c.flying)s+='<span title="Volare">✈️</span>';if(+c.first_strike)s+='<span title="Attacco improvviso">⚡</span>';if(+c.deathtouch)s+='<span title="Tocco letale">☠️</span>';if(+c.trample)s+='<span title="Travolgere">🐗</span>';if(+c.double_strike)s+='<span title="Doppio attacco">⚔️</span>';if(+c.lifelink)s+='<span title="Legame vitale">💖</span>';if(+c.reach)s+='<span title="Raggiungere">🏹</span>';if(+c.defender)s+='<span title="Difensore">🧱</span>';return s;}
 function cardImg(c){return c&&c.image_url?`<img class="pc-img" loading="lazy" src="${c.image_url}" alt="${esc(c.name)}" onerror="this.parentNode.classList.add('noimg');this.remove();">`:'';}
 
-function coverHtml(c){
-  const k = kwIcons(c);
-  return `<div class="pc-cover">${k ? `<span class="kw">${k}</span>` : '<span class="vanilla">✦</span>'}</div>`;
-}
 function cardMarkup(c, extra=''){
+  const kw = kwIcons(c);
   return `<div class="play-card c-${c.colors||'C'} ${extra}">
     ${cardImg(c)}
-    ${coverHtml(c)}
+    <span class="pc-name-overlay">${esc(c.name)}</span>
+    <span class="pc-cost-overlay">${c.mana_value}</span>
+    ${kw ? `<span class="pc-kw-overlay">${kw}</span>` : ''}
+    <span class="pc-pt-overlay">${c.power}/${c.toughness}</span>
     <div class="pc-fallback">
       <div class="pc-top"><span class="pc-name">${esc(c.name)}</span><span class="pc-cost">${c.mana_value}</span></div>
       <div class="pc-pt">${c.power}/${c.toughness}</div>
       <div class="pc-kw">${kwIcons(c)}</div>
+    </div>
+  </div>`;
+}
+
+/* Carta in formato "standard" (stesso layout della Fucina/card-editor):
+   header costo+nome | immagine | footer gemma+sottotipo+rarità | stats keyword+P/T. */
+const RARITY_LABEL = { common: 'Comune', uncommon: 'Non-comune', rare: 'Rara', mythic: 'Mitica' };
+
+function stdCardMarkup(c){
+  const col = c.colors || 'C';
+  const noimg = c.image_url ? '' : ' noimg';
+  const img = c.image_url
+    ? `<img loading="lazy" src="${c.image_url}" alt="${esc(c.name)}" onerror="this.parentNode.classList.add('noimg');this.remove();">`
+    : '';
+  const kw = kwIcons(c);
+  return `<div class="card c-${col}${noimg}">
+    <div class="card-header c-${col}">
+      <div class="card-cost">${c.mana_value}</div>
+      <div class="card-name">${esc(c.name)}</div>
+    </div>
+    <div class="card-image${noimg}">${img}</div>
+    <div class="card-footer c-${col}">
+      <div class="card-subtype"><span class="gem r-${c.rarity || 'common'}"></span> ${esc(c.subtypes || '–')}</div>
+      <div class="card-rarity">${RARITY_LABEL[c.rarity] || 'Comune'}</div>
+    </div>
+    <div class="card-stats">
+      <div class="card-keywords">${kw || '–'}</div>
+      <div class="card-pt">${c.power}/${c.toughness}</div>
     </div>
   </div>`;
 }
@@ -44,6 +72,9 @@ function api(action, body){
 }
 
 function render(v){
+  // Il mago consigliere vive solo nell'hub: nascondilo in ogni altra fase.
+  const cc = document.getElementById('coach');
+  if (cc) cc.hidden = true;
   if (!v || !v.ok)                  return renderError(v && v.error);
   if (v.phase === 'none')           return renderColorPick();
   if (v.phase === 'drafting')       return renderDraft(v);
@@ -73,6 +104,7 @@ function renderColorPick(){
   root.querySelectorAll('.valico').forEach(el => {
     el.onclick = () => {
       el.style.pointerEvents = 'none';
+      try { localStorage.removeItem('varco_runlog'); } catch (e) {} // nuova run: azzera il riepilogo
       api('NEW', { color: el.dataset.c }).then(render);
     };
   });
@@ -89,9 +121,7 @@ function renderDraft(v){
       <div class="camp-meta"><span>Valico <b>${v.color}</b></span><span>Mazzo finora <b>${v.deck_size}</b></span></div>
     </div>
     <div class="card-grid" id="draft-grid">
-      ${d.options.map((c, i) => `<div class="pick-card" data-i="${i}">
-        <span class="rar r-${c.rarity}">${c.rarity}</span>${cardMarkup(c)}
-      </div>`).join('')}
+      ${d.options.map((c, i) => `<div class="pick-card" data-i="${i}">${stdCardMarkup(c)}</div>`).join('')}
     </div>
     <div class="camp-bar">
       <button class="btn primary" id="confirm" disabled>Conferma (0/${d.pick})</button>
@@ -117,6 +147,8 @@ function renderDraft(v){
     api('PICK', { ids }).then(render);
   };
   $('#abandon').onclick = abandon;
+
+  adviseDraft(v); // il mago suggerisce quali carte prenderebbe
 }
 
 function curveHtml(deck){
@@ -242,6 +274,103 @@ function renderHub(v){
     };
   });
   $('#abandon').onclick = abandon;
+
+  suggestAttack(v); // il mago consiglia il prossimo livello da affrontare
+}
+
+/* --- Mago consigliere dell'hub: suggerisce CHI attaccare ed evidenzia il nodo --- */
+const POSE_IMG = {
+  spiega: '/assets/tutor/mago-spiega.png',
+  indica: '/assets/tutor/mago-indica.png',
+  pensa:  '/assets/tutor/mago-pensa.png',
+};
+let campCoachOff = false; // se l'utente chiude il fumetto, non lo ririproponiamo in questa sessione
+
+function showCampCoach(msg, pose){
+  if (campCoachOff) return;
+  let box = document.getElementById('coach');
+  if (!box){ box = document.createElement('div'); box.id = 'coach'; document.body.appendChild(box); }
+  box.className = 'coach coach-camp';
+  const img = POSE_IMG[pose] || POSE_IMG.indica;
+  box.innerHTML = `<img class="coach-mago" src="${img}" alt="Mago narratore" onerror="this.style.display='none'">
+    <div class="coach-bubble">
+      <span class="coach-msg">${msg}</span>
+      <button class="coach-x" aria-label="ho capito">✓</button>
+    </div>`;
+  box.hidden = false;
+  box.querySelector('.coach-x').onclick = () => { box.hidden = true; campCoachOff = true; };
+}
+
+function suggestAttack(v){
+  const valleys = v.valleys || [];
+  // Passi di FRONTIERA (status 'open' = prossimo sbloccabile) di tutte le valli.
+  const open = [];
+  valleys.forEach(V => (V.steps || []).forEach(s => { if (s.status === 'open') open.push({ valley: V.valley, s }); }));
+
+  // Preferisci la valle del MAZZO (casa), poi un livello non-boss, poi qualsiasi frontiera.
+  const pick = open.find(o => o.valley === v.color && !o.s.boss)
+            || open.find(o => !o.s.boss)
+            || open[0] || null;
+
+  if (!pick){
+    showCampCoach('Hai forzato <b>tutte le valli</b>! 🏔 Non resta più nessun varco aperto da sfidare.', 'spiega');
+    return;
+  }
+  const cn = COLOR_NAME[pick.valley] || pick.valley;
+  const msg = `Ti conviene attaccare <b>${esc(pick.s.level_name)}</b> a <b>${esc(pick.s.village_name)}</b> (Valle ${cn})` +
+              (pick.s.boss ? ' — ma è il <b>BOSS</b> 👑, fatti trovare pronto!' : '. È il prossimo varco da forzare.');
+  showCampCoach(msg, pick.s.boss ? 'pensa' : 'indica');
+
+  // Evidenzia il nodo consigliato sulla mappa (o nel pannello hub classico).
+  const node = root.querySelector(
+    `.map-node[data-valley="${pick.valley}"][data-step="${pick.s.step}"],` +
+    `.hub-step[data-valley="${pick.valley}"][data-step="${pick.s.step}"]`);
+  if (node) node.classList.add('suggested');
+}
+
+/* --- Mago consigliere del DRAFT: "io prenderei..." + evidenzia le carte migliori --- */
+// Punteggio grezzo: statistiche per mana + bonus rarità + keyword. Solo per dare una dritta.
+function cardScore(c){
+  const mv    = Math.max(1, +c.mana_value || 1);
+  const stats = (+c.power || 0) + (+c.toughness || 0);
+  const rar   = { common: 0, uncommon: 1, rare: 3, mythic: 5 }[c.rarity] || 0;
+  let kw = 0;
+  ['flying','deathtouch','double_strike','lifelink','first_strike','trample','reach','defender']
+    .forEach(k => { if (+c[k]) kw++; });
+  return stats / mv * 2 + rar + kw * 1.2 + (+c.power || 0) * 0.3;
+}
+
+function adviseDraft(v){
+  const d = v.draft;
+  if (!d || !Array.isArray(d.options) || !d.options.length) return;
+
+  const ranked = d.options.map((c, i) => ({ c, i, s: cardScore(c) })).sort((a, b) => b.s - a.s);
+  const top    = ranked.slice(0, Math.max(1, d.pick || 1));
+  const names  = top.map(t => `<b>${esc(t.c.name)}</b>`);
+  const list   = names.length > 1
+    ? names.slice(0, -1).join(', ') + ' e ' + names[names.length - 1]
+    : names[0];
+
+  const best = top[0].c;
+  let why = ' (ottime statistiche per il costo)';
+  if (['rare', 'mythic'].includes(best.rarity)) why = ' (è una carta rara, una potenziale bomba 💥)';
+  else if (+best.flying)     why = ' (vola ✈️, difficile da bloccare)';
+  else if (+best.deathtouch) why = ' (tocco letale ☠️, abbatte qualsiasi cosa)';
+  else if (+best.double_strike) why = ' (doppio attacco ⚔️)';
+
+  showCampCoach(`Io prenderei ${list}${why}. Ma scegli col tuo stile!`, 'pensa');
+
+  top.forEach(t => {
+    const el = root.querySelector(`.pick-card[data-i="${t.i}"]`);
+    if (el && !el.querySelector('.advised-tag')) {
+      el.classList.add('advised');
+      const tag = document.createElement('span');
+      tag.className = 'advised-tag';
+      tag.textContent = '👍';
+      tag.title = 'Consiglio del mago';
+      el.appendChild(tag);
+    }
+  });
 }
 
 function renderReward(v){
@@ -256,9 +385,7 @@ function renderReward(v){
       <div class="camp-meta"><span>Mazzo <b>${v.color}</b></span><span><b>${v.deck_size}</b> carte</span></div>
     </div>
     <div class="card-grid" id="reward-grid">
-      ${r.options.map((c, i) => `<div class="pick-card" data-i="${i}">
-        <span class="rar r-${c.rarity}">${c.rarity}</span>${cardMarkup(c)}
-      </div>`).join('')}
+      ${r.options.map((c, i) => `<div class="pick-card" data-i="${i}">${stdCardMarkup(c)}</div>`).join('')}
     </div>
     <div class="camp-bar"><button class="btn primary" id="take" disabled>Prendi la carta</button></div>`;
 

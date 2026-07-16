@@ -6,6 +6,7 @@ $bodyClass = 'page-battle';
 $deckId   = (int) ($_GET['deck_id'] ?? 0);
 $color    = strtoupper(substr((string) ($_GET['color'] ?? ''), 0, 1));
 $campaign = !empty($_GET['campaign']) ? 1 : 0;
+$tutorial = !empty($_GET['tutorial']) ? 1 : 0;
 require __DIR__ . '/partials/header.php';
 
 $crestSvg = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C20 12 28 14 28 16C28 18 20 20 16 29C12 20 4 18 4 16C4 14 12 12 16 3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="16" cy="16" r="2.3" fill="currentColor"/></svg>';
@@ -24,7 +25,7 @@ function slot_role_html(int $lane, string $side): string {
         : '<span class="slot-role defend" title="difende">' . $ICON_SHIELD . '</span>';
 }
 ?>
-<section class="battle" data-deck-id="<?= $deckId ?>" data-color="<?= htmlspecialchars($color) ?>" data-campaign="<?= $campaign ?>" data-hand-size="<?= HAND_SIZE ?>" data-mage-life="<?= MAGE_LIFE ?>" data-mana-cap="<?= MANA_CAP ?>">
+<section class="battle" data-deck-id="<?= $deckId ?>" data-color="<?= htmlspecialchars($color) ?>" data-campaign="<?= $campaign ?>" data-tutorial="<?= $tutorial ?>" data-hand-size="<?= HAND_SIZE ?>" data-mage-life="<?= MAGE_LIFE ?>" data-mana-cap="<?= MANA_CAP ?>">
 
     <div class="board">
 
@@ -107,7 +108,13 @@ function slot_role_html(int $lane, string $side): string {
     <div id="screenshot-toast" class="screenshot-toast" hidden></div>
 
     <div id="result" class="result" hidden></div>
+
+<?php if ($tutorial): ?>
+    <!-- Tutorial: overlay introduttivo (slide) + coach contestuale durante la partita reale. -->
+    <div id="tut-intro" class="tut-intro" hidden></div>
+    <div id="coach" class="coach" hidden></div>
+<?php endif; ?>
 </section>
 
-<script src="/assets/app.js?v=kw1"></script>
+<script src="/assets/app.js?v=overlay3"></script>
 <?php require __DIR__ . '/partials/footer.php'; ?>

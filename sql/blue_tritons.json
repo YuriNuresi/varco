@@ -1,0 +1,20 @@
+{
+  "name": "Tritoni Blu",
+  "description": "12 Tritoni guerrieri del Varco",
+  "color": "U",
+  "sql_file": "blue_tritons.sql",
+  "prompts": {
+    "Tritone Giovane": "A young triton with translucent fins, graceful and curious, swimming through crystalline waters, aquatic fantasy concept art, painterly, blues and aquamarines palette, highly detailed, no text, no people",
+    "Tritone del Varco": "A triton emerging from a dimensional rift in the sea, water magic swirling, dark fantasy aquatic concept art, painterly, blues and aquamarines palette, highly detailed, no text, no people",
+    "Tritone Guerriero": "A warrior triton with trident and armor, fierce and powerful, ready for battle, dark fantasy aquatic concept art, painterly, blues and aquamarines palette, highly detailed, no text, no people",
+    "Tritone Protettore": "A protective triton guardian of the seas, defensive stance, surrounded by water magic, dark fantasy aquatic concept art, painterly, blues and aquamarines palette, highly detailed, no text, no people",
+    "Tritone Pescatore": "A triton fisher with nets and spears, skilled hunter of the deep, dark fantasy aquatic concept art, painterly, blues and aquamarines palette, highly detailed, no text, no people",
+    "Tritone Mistico": "A mystical triton shaman channeling ocean magic, ethereal and wise, dark fantasy aquatic concept art, painterly, blues and aquamarines palette, highly detailed, no text, no people",
+    "Signore dei Tritoni": "A lord triton commanding the seas, regal and terrible, dark fantasy aquatic concept art, painterly, blues and aquamarines palette, highly detailed, no text, no people",
+    "Tritone Regnante": "A reigning triton ruler of his kingdom, magnificent and powerful, dark fantasy aquatic concept art, painterly, blues and aquamarines palette, highly detailed, no text, no people",
+    "Tritone Immortale": "An immortal ancient triton of immense age and power, transcendent being, dark fantasy aquatic concept art, painterly, blues and aquamarines palette, highly detailed, no text, no people",
+    "Tritone Tiranno": "A tyrant triton ruling with absolute dominion, terrible and commanding, dark fantasy aquatic concept art, painterly, blues and aquamarines palette, highly detailed, no text, no people",
+    "Re dei Tritoni": "A king of all tritons, legendary ruler of the deep seas, dark fantasy aquatic concept art, painterly, blues and aquamarines palette, highly detailed, no text, no people",
+    "Poseidone dei Mari": "A deity-like triton embodying oceanic power, cosmic and divine, dark fantasy aquatic concept art, painterly, blues and aquamarines palette, highly detailed, no text, no people"
+  }
+}

@@ -30,21 +30,28 @@ require __DIR__ . '/partials/header.php';
 .valico .deck-color{width:2.6rem;height:2.6rem;font-size:1.2rem}
 .valico .vname{font-family:"Cinzel",serif;letter-spacing:.1em;color:var(--gold-bright)}
 
-.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:2.4rem 1rem;
   max-width:780px;margin:1.4rem auto}
 .pick-card{position:relative;cursor:pointer;border-radius:10px;transition:transform .15s;
   outline:2px solid transparent;outline-offset:3px}
+/* Carte del picker TUTTE uguali: area immagine ad aspect-ratio fisso (object-fit:cover ritaglia),
+   così header/footer/stats si allineano fra le carte qualunque sia il formato dell'illustrazione. */
+.pick-card .card{height:100%}
+.pick-card .card-image{flex:none;aspect-ratio:3/4;min-height:0}
+.pick-card .card-image.noimg{aspect-ratio:3/4;min-height:0}
 .pick-card:hover{transform:translateY(-4px)}
 .pick-card.sel{outline-color:var(--gold-bright);box-shadow:0 0 22px rgba(236,210,141,.5)}
 .pick-card.sel::after{content:"✓";position:absolute;top:-12px;right:-12px;z-index:6;
   width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
   background:linear-gradient(180deg,#ecd28d,#c4a259);color:#150f08;font-weight:700;
   box-shadow:0 0 0 2px var(--ink),0 3px 8px rgba(0,0,0,.6)}
-.pick-card .rar{position:absolute;left:6px;top:6px;z-index:6;font-family:"Cinzel",serif;font-size:.6rem;
-  letter-spacing:.1em;text-transform:uppercase;padding:.1rem .4rem;border-radius:4px;
-  background:rgba(8,5,16,.85);border:1px solid var(--gold-dim);color:var(--parch)}
-.pick-card .rar.r-rare{color:var(--gold-bright);border-color:var(--gold)}
-.pick-card .rar.r-mythic{color:#ff9a55;border-color:#ff9a55}
+/* Carta consigliata dal mago nel draft: alone dorato + bollino 👍 (la selezione resta prioritaria). */
+.pick-card.advised{box-shadow:0 0 0 2px var(--gold-bright),0 0 18px rgba(236,210,141,.4)}
+/* Bollino SOTTO la carta, centrato (dentro la carta copriva le icone abilità). */
+.pick-card .advised-tag{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:.35rem;
+  z-index:6;font-size:1rem;line-height:1;
+  background:rgba(8,5,16,.85);border:1px solid var(--gold);border-radius:6px;padding:.12rem .3rem;
+  box-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none}
 
 .camp-bar{display:flex;gap:.8rem;justify-content:center;align-items:center;flex-wrap:wrap;margin:1.4rem 0}
 .deck-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:.5rem;
@@ -128,5 +135,5 @@ require __DIR__ . '/partials/header.php';
   text-align:center;text-transform:uppercase;font-size:.78rem}
 </style>
 
-<script src="/assets/campaign.js?v=5-ruin"></script>
+<script src="/assets/campaign.js?v=stdcard1"></script>
 <?php require __DIR__ . '/partials/footer.php'; ?>

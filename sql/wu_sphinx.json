@@ -1,0 +1,21 @@
+{
+  "name": "Sphinx WU",
+  "description": "13 Sphinx intelligenti bicolore WU",
+  "color": "WU",
+  "sql_file": "wu_sphinx.sql",
+  "prompts": {
+    "Sfinge Custode": "A wise sphinx guardian watching over sacred grounds, protective stance, noble bearing, fantasy art, blues and whites palette, regal, highly detailed, no text, no people",
+    "Sfinge del Varco": "A sphinx emerging from a dimensional rift, ethereal and mystical, caught between worlds, fantasy art, blues and whites palette, highly detailed, no text, no people",
+    "Sfinge Saggio": "An ancient sphinx scholar pondering mysteries, thoughtful expression, library setting, fantasy art, blues and whites palette, highly detailed, no text, no people",
+    "Sfinge Sapiente": "A sphinx radiating wisdom and knowledge, piercing eyes, magical aura, fantasy art, blues and whites palette, highly detailed, no text, no people",
+    "Sfinge Consigliata": "A graceful sphinx advisor with elegant bearing, flowing form, mystical glow, fantasy art, blues and whites palette, highly detailed, no text, no people",
+    "Sfinge Guardiana": "A sphinx protector perched vigilantly, wings spread, surveying domain below, fantasy art, blues and whites palette, highly detailed, no text, no people",
+    "Signore degli Sphinx": "A magnificent sphinx lord commanding respect, regal majesty, golden and silver accents, fantasy art, blues and whites palette, highly detailed, no text, no people",
+    "Sfinge Colossale": "A colossal sphinx of enormous proportions, towering and majestic, dwarfing surroundings, fantasy art, blues and whites palette, highly detailed, no text, no people",
+    "Sfinge Primordiale": "An ancient sphinx of primordial origin, carrying marks of ages past, cosmic wisdom, fantasy art, blues and whites palette, highly detailed, no text, no people",
+    "Sfinge Celeste": "A heavenly sphinx bathed in starlight, ethereal wings, divine presence, fantasy art, blues and whites palette, highly detailed, no text, no people",
+    "Re degli Sphinx": "A king of sphinx commanding all sphinx kind, supreme authority, legendary bearing, fantasy art, blues and whites palette, highly detailed, no text, no people",
+    "Sfinge Eternale": "An eternal sphinx transcending time, ageless form, carrying infinite wisdom, fantasy art, blues and whites palette, highly detailed, no text, no people",
+    "Patriarca Sphinx Immortale": "An immortal patriarch sphinx apex of creation, ultimate wisdom, celestial power, fantasy art, blues and whites palette, highly detailed, no text, no people"
+  }
+}

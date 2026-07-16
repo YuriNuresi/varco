@@ -2,6 +2,16 @@
 /** Header HTML condiviso. Usa la variabile $pageTitle se definita. */
 declare(strict_types=1);
 $pageTitle = $pageTitle ?? 'Battaglia di corsie';
+
+require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../../src/auth.php';
+$_varcoUser  = current_user();
+$_varcoAdmin = is_admin();
+
+// --- Faro: tracking server-side (pageview + src, immune adblock). --------------
+// Guardia is_file: in locale (dove Faro non è raggiungibile) è un no-op innocuo.
+$faroTrack = __DIR__ . '/../../../3d/faro/track.php';
+if (is_file($faroTrack)) { require_once $faroTrack; faro_track('varco'); }
 ?>
 <!doctype html>
 <html lang="it">
@@ -12,7 +22,10 @@ $pageTitle = $pageTitle ?? 'Battaglia di corsie';
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Grenze+Gotisch:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/style.css">
+    <link rel="stylesheet" href="/assets/style.css?v=overlay5">
+    <!-- Faro: analytics cross-game -->
+    <script src="https://portale3d.it/faro/sdk.js" data-app="varco" data-endpoint="https://portale3d.it/faro/collect.php"></script>
+    <script>window.faro && faro.track('app_open');</script>
 </head>
 <body class="<?= htmlspecialchars($bodyClass ?? '') ?>">
 <div class="sky" aria-hidden="true">
@@ -36,13 +49,42 @@ $pageTitle = $pageTitle ?? 'Battaglia di corsie';
     <div class="grain"></div>
     <div class="vignette"></div>
 </div>
-<header class="topbar">
+<button class="hamburger" id="hamburger" aria-label="Menu" aria-expanded="false">☰</button>
+<header class="topbar" id="topbar">
     <a class="brand" href="/index.php">Varco</a>
     <nav>
         <a href="/index.php">Soglia</a>
         <a href="/campaign.php">Campagna</a>
         <a href="/draft.php">Buste</a>
         <a href="/deckbuilder.php">Grimorio</a>
+        <a href="/catalogo.php">Catalogo</a>
+        <a href="/end.php">Riepilogo</a>
+        <?php if ($_varcoAdmin): ?>
+            <span class="nav-sep">|</span>
+            <a href="/card-editor.php" class="nav-admin">Fucina</a>
+            <a href="/campaign-editor.php" class="nav-admin">Editor Camp.</a>
+        <?php endif; ?>
     </nav>
+    <div class="auth-area">
+        <?php if ($_varcoUser): ?>
+            <?php if ($_varcoUser['picture']): ?>
+                <img src="<?= htmlspecialchars($_varcoUser['picture']) ?>" alt="" class="auth-avatar">
+            <?php endif; ?>
+            <a href="/auth_logout.php" class="btn ghost btn-sm">Esci</a>
+        <?php else: ?>
+            <a href="/auth_google.php" class="btn ghost btn-sm">Accedi</a>
+        <?php endif; ?>
+    </div>
 </header>
+<script>
+(function(){
+  var h=document.getElementById('hamburger'),t=document.getElementById('topbar');
+  if(!h)return;
+  h.addEventListener('click',function(){
+    var open=t.classList.toggle('open');
+    h.setAttribute('aria-expanded',open);
+    h.textContent=open?'✕':'☰';
+  });
+})();
+</script>
 <main class="container">

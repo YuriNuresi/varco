@@ -1,0 +1,28 @@
+# Faro — vive DENTRO il docroot di portale3d.it (3d/faro/).
+# Espone solo gli endpoint web; tutto il resto è negato via HTTP.
+
+# Nega l'accesso diretto a config, libreria, schema, helper e docs.
+<FilesMatch "\.(md|sql|env)$">
+  Require all denied
+</FilesMatch>
+
+<Files "config.php">
+  Require all denied
+</Files>
+
+<Files "track.php">
+  Require all denied
+</Files>
+
+# Le sottocartelle lib/ e sql/ non devono essere navigabili/servite.
+RedirectMatch 403 ^/faro/lib/.*$
+RedirectMatch 403 ^/faro/sql/.*$
+
+Options -Indexes
+
+# Cache breve sull'SDK: gli aggiornamenti si propagano entro pochi minuti.
+<IfModule mod_headers.c>
+  <FilesMatch "sdk\.js$">
+    Header set Cache-Control "max-age=300, must-revalidate"
+  </FilesMatch>
+</IfModule>

@@ -47,6 +47,7 @@ final class Engine
             'reach'         => (bool)   ($c['reach'] ?? false),        // raggiungere: può bloccare i volanti
             'defender'      => (bool)   ($c['defender'] ?? false),     // difensore: non può attaccare (potenza 0 in attacco), ma para normalmente
             'rarity'       => (string) ($c['rarity'] ?? 'common'),
+            'subtypes'     => (string) ($c['subtypes'] ?? ''),
             'image_url'    => $c['image_url'] ?? null,
             'wounds'       => (int)    ($c['wounds'] ?? 0), // danno persistente subìto (multi-round)
         ];

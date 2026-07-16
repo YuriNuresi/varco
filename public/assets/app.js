@@ -6,6 +6,7 @@ const battleEl = $('.battle');
 const deckId   = parseInt(battleEl.dataset.deckId, 10) || 0;
 const startColor = (battleEl.dataset.color || '').toUpperCase();
 const CAMPAIGN = battleEl.dataset.campaign === '1';
+const TUTORIAL = battleEl.dataset.tutorial === '1';
 const MAGE_LIFE0 = parseInt(battleEl.dataset.mageLife, 10) || 10;
 const MANA_CAP   = parseInt(battleEl.dataset.manaCap, 10) || 10;
 
@@ -46,21 +47,33 @@ function effT(c){ return (+c.toughness || 0) - (+c.wounds || 0); }   // costituz
 function ptHtml(c){ const w=(+c.wounds||0)>0; return `${c.power}/<span class="${w?'pt-wounded':''}">${effT(c)}</span>`; }
 function cardImg(c){if(!c||!c.image_url)return '';return `<img class="pc-img" loading="lazy" src="${c.image_url}" alt="${escapeHtml(c.name)}" onerror="this.parentNode.classList.add('noimg');this.remove();">`;}
 
-function coverHtml(c){
-  const k = kwIcons(c);
-  return `<div class="pc-cover">${k ? `<span class="kw">${k}</span>` : '<span class="vanilla">✦</span>'}</div>`;
-}
+const RARITY_LABEL = { common: 'Comune', uncommon: 'Non-comune', rare: 'Rara', mythic: 'Mitica' };
+
 function cardMarkup(c, extraClass = '') {
   const isWounded = (+c.wounds || 0) > 0;
-  const overlay = isWounded ? `<span class="pc-pt-overlay pt-wounded">${c.power}/${effT(c)}</span>` : '';
-  return `<div class="play-card c-${c.colors || 'C'} ${extraClass}${isWounded ? ' wounded' : ''}">
-    ${cardImg(c)}
-    ${coverHtml(c)}
-    ${overlay}
-    <div class="pc-fallback">
-      <div class="pc-top"><span class="pc-name">${escapeHtml(c.name)}</span><span class="pc-cost">${c.mana_value}</span></div>
-      <div class="pc-pt">${ptHtml(c)}</div>
-      <div class="pc-kw">${kwIcons(c)}</div>
+  const kw = kwIcons(c);
+  const img = cardImg(c);
+  const color = c.colors || 'C';
+  return `<div class="card c-${color} ${extraClass}${isWounded ? ' wounded' : ''}">
+    <div class="card-header c-${color}">
+      <div class="card-cost">${c.mana_value}</div>
+      <div class="card-name">${escapeHtml(c.name)}</div>
+    </div>
+    <div class="card-image${!img ? ' noimg' : ''}">
+      ${img}
+      <div class="pc-fallback">
+        <div class="pc-top"><span class="pc-name">${escapeHtml(c.name)}</span><span class="pc-cost">${c.mana_value}</span></div>
+        <div class="pc-pt">${ptHtml(c)}${isWounded ? '<span style="color:var(--blood-soft)"> ⚠</span>' : ''}</div>
+        <div class="pc-kw">${kw || '–'}</div>
+      </div>
+    </div>
+    <div class="card-footer c-${color}">
+      <div class="card-subtype">${c.subtypes || '–'}</div>
+      <div class="card-rarity">${RARITY_LABEL[c.rarity] || 'Comune'}</div>
+    </div>
+    <div class="card-stats">
+      <div class="card-keywords">${kw || '–'}</div>
+      <div class="card-pt${isWounded ? ' pt-wounded' : ''}">${c.power}/${effT(c)}</div>
     </div>
   </div>`;
 }
@@ -192,17 +205,26 @@ function renderHand() {
   cards.forEach((c, idx) => {
     const div = document.createElement('div');
     const affordable = c.mana_value <= (G.budget - reserve);
-    const wounded = (+c.wounds || 0) > 0 ? ' wounded' : '';
-    div.className = 'play-card hand-card c-' + (c.colors || 'C') + (affordable ? '' : ' unaffordable') + wounded + (deal ? ' dealing' : '');
+    const wounded = (+c.wounds || 0) > 0;
+    const kw = kwIcons(c);
+    const color = c.colors || 'C';
+    div.className = 'card hand-card c-' + color + (affordable ? '' : ' unaffordable') + (wounded ? ' wounded' : '') + (deal ? ' dealing' : '');
     if (deal) div.style.animationDelay = (idx * 0.09) + 's';
-    div.innerHTML = `${cardImg(c)}
-      <span class="hc-cost">${c.mana_value}</span>
-      <span class="hc-pt">${ptHtml(c)}</span>
-      <span class="hc-kw">${kwIcons(c)}</span>
-      <div class="pc-fallback">
-        <div class="pc-top"><span class="pc-name">${escapeHtml(c.name)}</span><span class="pc-cost">${c.mana_value}</span></div>
-        <div class="pc-pt">${ptHtml(c)}</div>
-        <div class="pc-kw">${kwIcons(c)}</div>
+    div.innerHTML = `
+      <div class="card-header c-${color}">
+        <div class="card-cost">${c.mana_value}</div>
+        <div class="card-name">${escapeHtml(c.name)}</div>
+      </div>
+      <div class="card-image">
+        ${cardImg(c)}
+      </div>
+      <div class="card-footer c-${color}">
+        <div class="card-subtype">${c.subtypes || '–'}</div>
+        <div class="card-rarity">–</div>
+      </div>
+      <div class="card-stats">
+        <div class="card-keywords">${kw || '–'}</div>
+        <div class="card-pt${wounded ? ' pt-wounded' : ''}">${c.power}/${effT(c)}</div>
       </div>`;
     if (G.selectableLane !== null && affordable) {
       div.classList.add('playable');
@@ -221,7 +243,7 @@ function placeCard(lane, side, card, faceDown = false, animate = false) {
 }
 
 function badge(lane, side, text, cls) {
-  const slot = document.querySelector(`.slot[data-lane="${lane}"][data-side="${side}"] .play-card`);
+  const slot = document.querySelector(`.slot[data-lane="${lane}"][data-side="${side}"] :is(.card,.play-card)`);
   if (!slot) return;
   const b = document.createElement('span');
   b.className = 'lane-badge ' + (cls || '');
@@ -298,6 +320,7 @@ function showChoice(card) {
   setPrompt(legalBlock
     ? `${card.name} schierato. Scegli sopra la carta: PARA (scontro) o SUBISCI (in faccia).`
     : `${card.name} non può parare un volante: puoi solo SUBIRE.`);
+  coachOnce('parasubisci', '<b>Para</b>: le creature si scontrano (può morire una o entrambe). <b>Subisci</b>: il colpo va al tuo mago ma la creatura resta in gioco.', 'pensa');
 
   const bar = document.createElement('div');
   bar.className = 'lane-choice';
@@ -411,16 +434,19 @@ function advance(res) {
     case 'LANE0_PLAYER':
       setPrompt(res.prompt || '');
       G.selectableLane = 0; renderHand();
+      coachOnce('lane0', 'Corsia 0: <b>attacchi tu</b> per primo. Tocca una carta illuminata in mano per schierarla. La CPU reagirà dopo.', 'indica');
       break;
     case 'LANE1_PLAYER':
       G.lane1Attacker = res.ai_card;
       setPrompt(res.prompt || '');
       G.selectableLane = 1; renderHand();
+      coachOnce('lane1', 'Corsia 1: la <b>CPU ti ha attaccato</b> (carta scoperta in alto). Scegli una tua creatura per rispondere.', 'indica');
       break;
     case 'LANE2_BLIND':
       placeCard(2, 'ai', null, true);
       setPrompt(res.prompt || '');
       G.selectableLane = 2; renderHand();
+      coachOnce('lane2', 'Corsia 2: <b>alla cieca</b>. Schieri senza vedere la carta della CPU: si rivelano insieme. Puoi anche passare.', 'pensa');
       break;
   }
   if (G.selectableLane !== null) showPass(); else hidePass();
@@ -470,6 +496,7 @@ function startNextRound(r) {
 function showRoundEnd(r) {
   hidePass();
   setRound(r.round);
+  coachOnce('roundend', 'Round concluso! I superstiti tornano in <b>mano</b> (feriti), i morti escono. Si continua finché un mago va a <b>0</b>.', 'spiega');
   const fat = r.fatigue ? ` ⚡ Fatica −${r.fatigue} a entrambi i maghi.` : '';
   setPrompt(`Round ${r.round - 1} concluso — vita 🧙 Tu ${Math.max(0, r.player_life)} · 🧙 CPU ${Math.max(0, r.ai_life)}.${fat}`);
   const nextBtn = $('#next-btn');
@@ -531,6 +558,26 @@ function pickBoon(kw, r) {
 
 /* --- Esito finale --- */
 
+// Storico dei match della "partita" (run) in localStorage: lo legge /end.php per il riepilogo
+// condivisibile. Voce = { outcome, round, vita finali, modalità, etichetta, timestamp }.
+const RUNLOG_KEY = 'varco_runlog';
+function logMatch(res, label) {
+  try {
+    const log = JSON.parse(localStorage.getItem(RUNLOG_KEY) || '[]');
+    log.push({
+      outcome: res.outcome,
+      round: res.round,
+      player_life: Math.max(0, res.player_life),
+      ai_life: Math.max(0, res.ai_life),
+      reason: res.reason || '',
+      mode: CAMPAIGN ? 'campaign' : 'sfida',
+      label: label || (CAMPAIGN ? 'Campagna' : 'Sfida rapida'),
+      ts: Date.now(),
+    });
+    localStorage.setItem(RUNLOG_KEY, JSON.stringify(log.slice(-40))); // tieni gli ultimi 40
+  } catch (e) { /* localStorage non disponibile: il riepilogo semplicemente non si aggiorna */ }
+}
+
 function showFinal(res) {
   hidePass();
   const box = $('#result');
@@ -563,23 +610,32 @@ function showFinal(res) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'FINISH', outcome: res.outcome, round: res.round }),
     }).then(r => r.json()).then(cv => {
+      const cur = (cv && cv.current) || {};
+      logMatch(res, cur.level_name ? `Valle ${cur.valley || ''} · ${cur.level_name}` : 'Campagna');
       const won = res.outcome === 'PLAYER';
       const actions = won
-        ? `<a class="btn primary" href="/campaign.php">🎁 Bottino — pesca una carta</a>`
+        ? `<a class="btn primary" href="/campaign.php">🎁 Bottino — pesca una carta</a>
+           <a class="btn" href="/end.php">📜 Riepilogo</a>`
         : `<button class="btn primary" onclick="location.reload()">↻ Riprova la battaglia</button>
-           <a class="btn" href="/campaign.php">🏔 Torna alla valle</a>`;
+           <a class="btn" href="/campaign.php">🏔 Torna alla valle</a>
+           <a class="btn" href="/end.php">📜 Riepilogo</a>`;
       box.querySelector('.result-actions').innerHTML = actions;
     }).catch(() => {
+      logMatch(res, 'Campagna');
       box.querySelector('.result-actions').innerHTML =
-        `<a class="btn primary" href="/campaign.php">🏔 Torna alla valle</a>`;
+        `<a class="btn primary" href="/campaign.php">🏔 Torna alla valle</a>
+         <a class="btn" href="/end.php">📜 Riepilogo</a>`;
     });
     return;
   }
+
+  logMatch(res, TUTORIAL ? 'Tutorial' : 'Sfida rapida');
 
   box.innerHTML = `
     <div class="result-banner ${cls}">${title}</div>${scoreHtml}
     <div class="result-actions">
       <button class="btn primary" onclick="location.reload()">↻ Rivincita</button>
+      <a class="btn" href="/end.php">📜 Riepilogo</a>
       <a class="btn" href="/index.php">← Home</a>
     </div>`;
   setPrompt('Battaglia conclusa.');
@@ -676,7 +732,7 @@ function laneStory(l) {
 
 /** Effetti di risoluzione: mostra il danno che la creatura ha inflitto al MAGO avversario + morte. */
 function cardFx(lane, side, mageDmg, clash, dead) {
-  const el = document.querySelector(`.slot[data-lane="${lane}"][data-side="${side}"] .play-card`);
+  const el = document.querySelector(`.slot[data-lane="${lane}"][data-side="${side}"] :is(.card,.play-card)`);
   if (!el) return;
   el.classList.add(clash ? 'clashing' : 'attacking');
   if (mageDmg > 0) {
@@ -701,7 +757,9 @@ function start() {
   const pb = $('#pass-btn'); if (pb) pb.onclick = passLane;
   const payload = CAMPAIGN ? { from_campaign: true }
                 : deckId ? { deck_id: deckId }
-                : (startColor ? { color: startColor } : null);
+                : startColor ? { color: startColor }
+                : TUTORIAL ? { color: 'R' } // tutorial: mazzo rosso costruito al volo
+                : null;
   if (!payload) { setPrompt('Nessun mazzo o colore selezionato. Torna alla home.'); return; }
   api('START', payload).then(res => {
     if (!res.ok) { setPrompt('⚠️ ' + res.error); return; }
@@ -721,4 +779,83 @@ function start() {
   });
 }
 
-start();
+// ─── Tutorial: intro a slide + coach contestuale (solo con ?tutorial=1) ──────
+const TUT_SLIDES = [
+  { t: '⟡ Benvenuto nel Varco',
+    h: 'Sei un <b>arcano</b>: schieri creature su <b>3 corsie</b> per azzerare la vita ❤️ del mago avversario. ' +
+       'La partita dura <b>più round</b> — chi arriva a 0 per primo perde.' },
+  { t: '🃏 Mano e mana',
+    h: 'A ogni round peschi una <b>mano</b> e hai un budget di <b>mana</b> (in basso a destra). ' +
+       'Il numero sull’angolo di ogni carta è il suo <b>costo</b>; le carte che puoi permetterti si illuminano.' },
+  { t: '⚔️ Le 3 corsie e i ruoli',
+    h: '<b>Corsia 0</b>: attacchi <b>tu</b> per primo (scoperto), poi la CPU reagisce.<br>' +
+       '<b>Corsia 1</b>: attacca <b>la CPU</b> per prima, poi reagisci tu.<br>' +
+       '<b>Corsia 2</b>: <b>alla cieca</b>, rivelazione simultanea.<br>' +
+       'Le icone 🗡️ lancia / 🛡️ scudo nelle piazzole mostrano chi attacca e chi difende.' },
+  { t: '🛡️ Para o Subisci',
+    h: 'Quando <b>difendi</b>, scegli:<br>• <b>Para</b> — la tua creatura si scontra con quella nemica.<br>' +
+       '• <b>Subisci</b> — lasci passare il colpo: il danno va in faccia al tuo mago, ma tieni la creatura per altro.<br>' +
+       'Leggi l’avversario e bluffa.' },
+  { t: '🔁 Round multipli e doni',
+    h: 'I superstiti tornano in <b>mano</b> (feriti), i morti escono. Si continua finché un mago va a <b>0</b>. ' +
+       'Dal <b>3° round</b> arrivano i <b>doni</b> (keyword come Volare ✈️, Travolgere 🐗). Pronto? Si comincia!' },
+];
+
+function showTutIntro() {
+  const box = document.getElementById('tut-intro');
+  if (!box) { start(); return; }
+  let i = 0;
+  const draw = () => {
+    const s = TUT_SLIDES[i];
+    const last = i === TUT_SLIDES.length - 1;
+    box.innerHTML = `
+      <div class="tut-card">
+        <div class="tut-dots">${TUT_SLIDES.map((_, k) => `<span class="${k === i ? 'on' : ''}"></span>`).join('')}</div>
+        <h2 class="tut-title">${s.t}</h2>
+        <p class="tut-body">${s.h}</p>
+        <div class="tut-nav">
+          ${i > 0 ? '<button class="btn ghost" id="tut-prev">← Indietro</button>' : '<span></span>'}
+          <button class="btn primary" id="tut-next">${last ? '🎓 Inizia la partita' : 'Avanti →'}</button>
+        </div>
+        <button class="tut-skip" id="tut-skip">salta introduzione</button>
+      </div>`;
+    const prev = document.getElementById('tut-prev');
+    if (prev) prev.onclick = () => { i--; draw(); };
+    document.getElementById('tut-next').onclick = () => {
+      if (last) { box.hidden = true; start(); } else { i++; draw(); }
+    };
+    document.getElementById('tut-skip').onclick = () => { box.hidden = true; start(); };
+  };
+  box.hidden = false;
+  draw();
+}
+
+// Coach: il MAGO NARRATORE con un fumetto, mostrato UNA volta per chiave ai momenti-chiave.
+// Le 3 pose sono PNG trasparenti in /assets/tutor/. Se un'immagine manca, l'<img> si nasconde
+// (onerror) e resta solo il fumetto: il tutorial funziona comunque.
+const tutSeen = new Set();
+const POSE_IMG = {
+  spiega: '/assets/tutor/mago-spiega.png', // libro aperto, accogliente
+  indica: '/assets/tutor/mago-indica.png', // indica col bastone
+  pensa:  '/assets/tutor/mago-pensa.png',  // mano sulla barba, pensieroso
+};
+function coach(msg, pose) {
+  const box = document.getElementById('coach');
+  if (!box) return;
+  const img = POSE_IMG[pose] || POSE_IMG.spiega;
+  box.innerHTML = `<img class="coach-mago" src="${img}" alt="Mago narratore"
+       onerror="this.style.display='none'">
+    <div class="coach-bubble">
+      <span class="coach-msg">${msg}</span>
+      <button class="coach-x" aria-label="ho capito">✓</button>
+    </div>`;
+  box.hidden = false;
+  box.querySelector('.coach-x').onclick = () => { box.hidden = true; };
+}
+function coachOnce(key, msg, pose) {
+  if (!TUTORIAL || tutSeen.has(key)) return;
+  tutSeen.add(key);
+  coach(msg, pose);
+}
+
+if (TUTORIAL) showTutIntro(); else start();
