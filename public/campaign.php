@@ -135,5 +135,5 @@ require __DIR__ . '/partials/header.php';
   text-align:center;text-transform:uppercase;font-size:.78rem}
 </style>
 
-<script src="/assets/campaign.js?v=stdcard1"></script>
+<script src="/assets/campaign.js?v=stdcard2"></script>
 <?php require __DIR__ . '/partials/footer.php'; ?>

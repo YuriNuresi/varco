@@ -183,8 +183,10 @@ const VALLEY_CLIP = {
   U: 'polygon(49% 51%, 78% 0%, 100% 0%, 100% 62%)',
 };
 
-function mapNode(valley, s){
-  const pos = VALLEY_NODES[valley] && VALLEY_NODES[valley][s.step - 1];
+function mapNode(valley, s, per){
+  // Le posizioni si RIUSANO a cicli di `per` (=6): finiti i passi 1-6, gli stessi punti
+  // ospitano i passi 7-12 (nuovi villaggi), poi 13-18, ecc.
+  const pos = VALLEY_NODES[valley] && VALLEY_NODES[valley][(s.step - 1) % per];
   if (!pos) return '';
   const mark = s.status === 'done' ? '✓' : (s.boss ? '👑' : s.step);
   return `<button class="map-node v-${valley} ${s.status}${s.boss?' boss':''}" ${s.playable ? '' : 'disabled'}
@@ -237,7 +239,16 @@ function renderHub(v){
   const valleys  = v.valleys || [];
   const mapped   = valleys.filter(V => VALLEY_NODES[V.valley]);
   const unmapped = valleys.filter(V => !VALLEY_NODES[V.valley]);
-  const nodesHtml = mapped.map(V => V.steps.map(s => mapNode(V.valley, s)).join('')).join('');
+  // Ogni valle mostra una "pagina" di nodi pari alle posizioni disponibili (6): la pagina
+  // corrente è quella del primo passo non ancora superato; a valle finita resta l'ultima.
+  const nodesHtml = mapped.map(V => {
+    const per     = VALLEY_NODES[V.valley].length;
+    const maxPage = Math.max(0, Math.ceil((V.total || V.steps.length) / per) - 1);
+    const page    = Math.min(Math.floor((V.done || 0) / per), maxPage);
+    return V.steps
+      .filter(s => Math.floor((s.step - 1) / per) === page)
+      .map(s => mapNode(V.valley, s, per)).join('');
+  }).join('');
   // Valli COMPLETATE: sfondo devastato ritagliato sul loro spicchio (le altre restano normali).
   // Anteprima per tarare i poligoni senza finire una valle: /campaign.php?ruin=all  oppure  ?ruin=R,B
   const rp = new URLSearchParams(location.search).get('ruin') || '';
