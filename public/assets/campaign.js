@@ -64,6 +64,50 @@ function stdCardMarkup(c){
   </div>`;
 }
 
+/* --- Preload immagini: prima di mostrare una griglia di carte nuove (draft/bottino), le carica
+   in cache con una barra 0→100%, così non "pop-ano" a scatti su connessioni lente. --- */
+function preloadImages(urls, onProgress){
+  const unique = [...new Set((urls || []).filter(Boolean))];
+  const total = unique.length;
+  if (!total) { onProgress(1, 1); return Promise.resolve(); }
+  let done = 0;
+  const loaders = unique.map(src => new Promise(resolve => {
+    let settled = false;
+    const finish = () => { if (settled) return; settled = true; done++; onProgress(done, total); resolve(); };
+    const img = new Image();
+    img.onload = finish; img.onerror = finish; img.src = src;
+    setTimeout(finish, 6000); // un'immagine lenta/rotta non deve bloccare la schermata
+  }));
+  return Promise.all(loaders);
+}
+function campPreloadShow(){
+  const ov = document.getElementById('camp-preload');
+  if (!ov) return;
+  ov.hidden = false; ov.classList.remove('done');
+  campPreloadPct(0);
+}
+function campPreloadPct(pct){
+  const fill = document.getElementById('camp-preload-fill');
+  const pctEl = document.getElementById('camp-preload-pct');
+  if (fill) fill.style.width = pct + '%';
+  if (pctEl) pctEl.textContent = pct + '%';
+}
+function campPreloadHide(){
+  const ov = document.getElementById('camp-preload');
+  if (!ov) return;
+  ov.classList.add('done');
+  setTimeout(() => { ov.hidden = true; }, 350);
+}
+/** Precarica le immagini di $cards, poi esegue $draw(). */
+function withCardPreload(cards, draw){
+  campPreloadShow();
+  const urls = (cards || []).map(c => c.image_url);
+  preloadImages(urls, (done, total) => campPreloadPct(Math.round(done / total * 100))).then(() => {
+    campPreloadHide();
+    draw();
+  });
+}
+
 function api(action, body){
   return fetch('/api/campaign.php', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -76,7 +120,7 @@ function render(v){
   const cc = document.getElementById('coach');
   if (cc) cc.hidden = true;
   if (!v || !v.ok)                  return renderError(v && v.error);
-  if (v.phase === 'none')           return renderColorPick();
+  if (v.phase === 'none')           return renderSaveSelect();
   if (v.phase === 'drafting')       return renderDraft(v);
   if (v.phase === 'pending_reward') return renderReward(v);
   if (v.phase === 'fighting')       return renderFighting(v);
@@ -89,28 +133,78 @@ function renderError(msg){
     <div class="camp-bar"><a class="btn" href="/index.php">← Home</a></div>`;
 }
 
-function renderColorPick(){
-  root.innerHTML = `
-    <div class="camp-head">
-      <h1>I cinque valichi</h1>
-      <p class="camp-sub">Scegli un valico: di lì nasce il tuo mazzo. Poi avrai davanti tutte e cinque le valli.</p>
-    </div>
-    <div class="color-grid">
-      ${COLORS.map(x => `<div class="valico" data-c="${x.c}">
-        <span class="deck-color c-${x.c}">${x.c}</span>
-        <span class="vname">${x.name}</span>
-      </div>`).join('')}
+/* --- Bottone "cambia valico", mostrato in ogni fase per saltare a un'altra run --- */
+function switchBtnHtml(){
+  return `<button class="btn ghost" id="switch-camp">🔄 Cambia valico</button>`;
+}
+function wireSwitchBtn(){
+  const el = $('#switch-camp');
+  if (el) el.onclick = renderSaveSelect;
+}
+
+/* --- Schermata "scegli il tuo valico": una run per colore, max 5 salvate --- */
+function saveCardHtml(x, s){
+  if (!s) {
+    return `<div class="valico" data-c="${x.c}" data-action="new">
+      <span class="deck-color c-${x.c}">${x.c}</span>
+      <span class="vname">${x.name}</span>
+      <span class="valico-status">Nessuna run — inizia</span>
     </div>`;
-  root.querySelectorAll('.valico').forEach(el => {
-    el.onclick = () => {
-      el.style.pointerEvents = 'none';
+  }
+  const label = s.phase === 'drafting' ? 'Draft in corso' : `${s.done}/${s.total} livelli`;
+  return `<div class="valico has-save" data-c="${x.c}" data-action="continue">
+    <span class="deck-color c-${x.c}">${x.c}</span>
+    <span class="vname">${x.name}</span>
+    <span class="valico-status">${esc(label)} · ${s.deck_size} carte</span>
+    <button type="button" class="valico-new" data-c="${x.c}" title="Ricomincia da zero">🔄 nuova run</button>
+  </div>`;
+}
+
+function renderSaveSelect(){
+  root.innerHTML = `<div class="camp-head"><h1>I cinque valichi</h1>
+    <p class="camp-sub">Carico i salvataggi…</p></div>`;
+  api('LIST').then(r => {
+    if (!r || !r.ok) return renderError(r && r.error);
+    root.innerHTML = `
+      <div class="camp-head">
+        <h1>I cinque valichi</h1>
+        <p class="camp-sub">Ogni valico ha una run distinta: mazzo e progressi separati. Continua o inizia da capo.</p>
+      </div>
+      <div class="color-grid">
+        ${COLORS.map(x => saveCardHtml(x, r.saves[x.c])).join('')}
+      </div>`;
+
+    const startNew = (c) => {
       try { localStorage.removeItem('varco_runlog'); } catch (e) {} // nuova run: azzera il riepilogo
-      api('NEW', { color: el.dataset.c }).then(render);
+      api('NEW', { color: c }).then(render);
     };
+
+    root.querySelectorAll('.valico').forEach(el => {
+      el.onclick = (ev) => {
+        if (ev.target.closest('.valico-new')) return; // gestito a parte
+        const c = el.dataset.c;
+        el.style.pointerEvents = 'none';
+        if (el.dataset.action === 'continue') { api('SWITCH', { color: c }).then(render); }
+        else { startNew(c); }
+      };
+    });
+    root.querySelectorAll('.valico-new').forEach(el => {
+      el.onclick = (ev) => {
+        ev.stopPropagation();
+        const c = el.dataset.c;
+        if (!confirm(`Ricominciare la run ${COLOR_NAME[c]}? Perdi il mazzo e i progressi attuali di quel valico.`)) return;
+        startNew(c);
+      };
+    });
   });
 }
 
 function renderDraft(v){
+  root.innerHTML = `<div class="camp-head"><h1>Draft del mazzo</h1><p class="camp-sub">Preparo le carte…</p></div>`;
+  withCardPreload(v.draft.options, () => doRenderDraft(v));
+}
+
+function doRenderDraft(v){
   const d = v.draft;
   const sel = new Set();
   root.innerHTML = `
@@ -126,6 +220,7 @@ function renderDraft(v){
     <div class="camp-bar">
       <button class="btn primary" id="confirm" disabled>Conferma (0/${d.pick})</button>
       <button class="btn ghost" id="abandon">Abbandona</button>
+      ${switchBtnHtml()}
     </div>`;
 
   const confirm = $('#confirm');
@@ -147,6 +242,7 @@ function renderDraft(v){
     api('PICK', { ids }).then(render);
   };
   $('#abandon').onclick = abandon;
+  wireSwitchBtn();
 
   adviseDraft(v); // il mago suggerisce quali carte prenderebbe
 }
@@ -273,7 +369,10 @@ function renderHub(v){
     ${unmapped.length ? `<p class="hint hub-todo">Valli non ancora posizionate sulla mappa — giocabili qui sotto:</p>
       <div class="hub-grid">${unmapped.map(valleyHtml).join('')}</div>` : ''}
     ${curveHtml(deck)}
-    <div class="camp-bar"><button class="btn ghost" id="abandon">Abbandona la run</button></div>
+    <div class="camp-bar">
+      <button class="btn ghost" id="abandon">Abbandona la run</button>
+      ${switchBtnHtml()}
+    </div>
     <details class="hub-deck"><summary>Il tuo mazzo (${v.deck_size})</summary>
       <div class="deck-strip">${deck.map(c => cardMarkup(c)).join('')}</div></details>`;
 
@@ -285,6 +384,7 @@ function renderHub(v){
     };
   });
   $('#abandon').onclick = abandon;
+  wireSwitchBtn();
 
   suggestAttack(v); // il mago consiglia il prossimo livello da affrontare
 }
@@ -385,6 +485,11 @@ function adviseDraft(v){
 }
 
 function renderReward(v){
+  root.innerHTML = `<div class="camp-head"><h1>🎁 Bottino</h1><p class="camp-sub">Preparo le carte…</p></div>`;
+  withCardPreload(v.reward.options, () => doRenderReward(v));
+}
+
+function doRenderReward(v){
   const r = v.reward;
   const cur = v.current || {};
   const sel = new Set();
@@ -398,7 +503,10 @@ function renderReward(v){
     <div class="card-grid" id="reward-grid">
       ${r.options.map((c, i) => `<div class="pick-card" data-i="${i}">${stdCardMarkup(c)}</div>`).join('')}
     </div>
-    <div class="camp-bar"><button class="btn primary" id="take" disabled>Prendi la carta</button></div>`;
+    <div class="camp-bar">
+      <button class="btn primary" id="take" disabled>Prendi la carta</button>
+      ${switchBtnHtml()}
+    </div>`;
 
   const take = $('#take');
   root.querySelectorAll('.pick-card').forEach(el => {
@@ -414,6 +522,7 @@ function renderReward(v){
     const id = r.options[[...sel][0]].id;
     api('REWARD', { id }).then(render);
   };
+  wireSwitchBtn();
 }
 
 function renderFighting(v){
@@ -426,8 +535,10 @@ function renderFighting(v){
     <div class="camp-bar">
       <a class="btn primary" href="/game.php?campaign=1">↩ Torna alla battaglia</a>
       <button class="btn ghost" id="abandon">Abbandona la run</button>
+      ${switchBtnHtml()}
     </div>`;
   $('#abandon').onclick = abandon;
+  wireSwitchBtn();
 }
 
 function abandon(){

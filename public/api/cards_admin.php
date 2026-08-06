@@ -24,8 +24,16 @@ if ($key !== INSTALL_KEY && !is_admin()) {
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-// --- GET: lista carte custom ------------------------------------------------
+// --- GET: lista carte custom, o stato dei provider immagine -----------------
 if ($method === 'GET') {
+    if (($_GET['action'] ?? '') === 'providers') {
+        $IMAGEN = __DIR__ . '/../../../imagen/lib/imagen.php';
+        if (!is_file($IMAGEN)) json_err('Motore imagen non trovato');
+        require_once $IMAGEN;
+        imagen_boot();
+        json_out(['ok' => true, 'providers' => imagen_available_providers()]);
+    }
+
     $where  = ["source = 'custom'"];
     $params = [];
 
@@ -96,59 +104,52 @@ if ($method === 'POST') {
         }
     }
 
-    // --- Generazione multi-provider (1 immagine per provider, scegli la migliore) ---
-    if ($action === 'generate_image_multi') {
+    // --- Generazione con UN SOLO provider scelto (1 bottone = 1 chiamata free-tier) ---
+    if ($action === 'generate_image_one') {
         $prompt = trim((string) ($in['prompt'] ?? ''));
         $cardName = trim((string) ($in['card_name'] ?? 'card'));
+        $provider = trim((string) ($in['provider'] ?? ''));
         if ($prompt === '') json_err('Prompt mancante');
+        if ($provider === '') json_err('Provider mancante');
 
         $slug = preg_replace('/[^a-z0-9]+/', '-', strtolower($cardName));
         $slug = trim($slug, '-') ?: 'card';
 
         $__loadHelios();
-        set_time_limit(180);
+        set_time_limit(90);
 
-        // provider dal registro centrale (gemini appare da solo se la chiave c'è);
-        // quelli in cooldown quota vengono riportati senza sprecare la chiamata
         $providers = imagen_available_providers();
-        $results = [];
-
-        foreach ($providers as $prov => $state) {
-            if (!$state['ready']) {
-                $results[] = [
-                    'provider' => $prov, 'ok' => false,
-                    'error' => 'Quota esaurita — riprovo dopo le ' . gmdate('H:i', $state['until']) . ' UTC',
-                ];
-                continue;
-            }
-            $filename = 'card_' . $slug . '_' . $prov . '_' . bin2hex(random_bytes(3)) . '.png';
-            $relPath  = 'assets/cards/' . $filename;
-            $absPath  = __DIR__ . '/../' . $relPath;
-            $absDir   = dirname($absPath);
-            if (!is_dir($absDir)) @mkdir($absDir, 0775, true);
-
-            $job = [
-                'prompt'      => $prompt,
-                'kind'        => 'card_art',
-                'target_path' => $relPath,
-                'ref_id'      => $slug,
-                'game_id'     => 'varco',
-                'scenario_id' => 'card-editor',
-                'width'       => 512,
-                'height'      => 768,
-                'seed'        => random_int(0, 999999),   // varia a ogni click e per provider
-            ];
-
-            try {
-                imagen_generate_one($prov, $job, $absPath);
-                $results[] = ['provider' => $prov, 'ok' => true, 'url' => '/' . $relPath];
-            } catch (Throwable $e) {
-                imagen_handle_quota_error($prov, $e->getMessage());   // aggiorna il ledger
-                $results[] = ['provider' => $prov, 'ok' => false, 'error' => $e->getMessage()];
-            }
+        if (!isset($providers[$provider])) json_err('Provider sconosciuto: ' . $provider);
+        if (!$providers[$provider]['ready']) {
+            json_out(['ok' => false, 'provider' => $provider,
+                'error' => 'Quota esaurita — riprovo dopo le ' . gmdate('H:i', $providers[$provider]['until']) . ' UTC']);
         }
 
-        json_out(['ok' => true, 'results' => $results]);
+        $filename = 'card_' . $slug . '_' . $provider . '_' . bin2hex(random_bytes(3)) . '.png';
+        $relPath  = 'assets/cards/' . $filename;
+        $absPath  = __DIR__ . '/../' . $relPath;
+        $absDir   = dirname($absPath);
+        if (!is_dir($absDir)) @mkdir($absDir, 0775, true);
+
+        $job = [
+            'prompt'      => $prompt,
+            'kind'        => 'card_art',
+            'target_path' => $relPath,
+            'ref_id'      => $slug,
+            'game_id'     => 'varco',
+            'scenario_id' => 'card-editor',
+            'width'       => 512,
+            'height'      => 768,
+            'seed'        => random_int(0, 999999),   // varia a ogni click
+        ];
+
+        try {
+            imagen_generate_one($provider, $job, $absPath);
+            json_out(['ok' => true, 'provider' => $provider, 'url' => '/' . $relPath]);
+        } catch (Throwable $e) {
+            imagen_handle_quota_error($provider, $e->getMessage());   // aggiorna il ledger
+            json_out(['ok' => false, 'provider' => $provider, 'error' => $e->getMessage()]);
+        }
     }
 
     // --- Crea carta custom ---------------------------------------------------

@@ -8,6 +8,14 @@ require __DIR__ . '/partials/header.php';
 <section class="campaign"
          data-draft-options="<?= CAMPAIGN_DRAFT_OPTIONS ?>" data-draft-pick="<?= CAMPAIGN_DRAFT_PICK ?>"
          data-reward-pick="<?= CAMPAIGN_REWARD_PICK ?>">
+    <div id="camp-preload" class="preload-overlay camp-preload" hidden>
+        <div class="preload-box">
+            <div class="preload-title">Preparo le carte…</div>
+            <div class="preload-bar"><div class="preload-fill" id="camp-preload-fill"></div></div>
+            <div class="preload-pct" id="camp-preload-pct">0%</div>
+        </div>
+    </div>
+
     <div id="camp-root" class="camp-root">
         <p class="hint">Carico la valle…</p>
     </div>
@@ -15,6 +23,11 @@ require __DIR__ . '/partials/header.php';
 
 <style>
 .camp-root{margin-top:1rem}
+/* variante dell'overlay di preload (condiviso con game.php) per lo sfondo della campagna, non l'arena */
+.camp-preload{background:
+    radial-gradient(120% 80% at 50% -8%, rgba(42,28,70,.68) 0%, rgba(21,14,40,.80) 42%, rgba(10,6,20,.90) 72%, rgba(6,4,16,.96) 100%),
+    url('/assets/bg/void.png') center top / cover no-repeat fixed,
+    var(--void)}
 .camp-head{text-align:center;margin-bottom:1.3rem}
 .camp-head h1{font-family:"Cinzel",serif;color:var(--gold-bright);font-size:2.1rem;margin:.2rem 0}
 .camp-sub{color:var(--muted);font-style:italic}
@@ -29,6 +42,11 @@ require __DIR__ . '/partials/header.php';
 .valico:hover{transform:translateY(-3px);border-color:var(--gold);box-shadow:0 0 18px rgba(196,162,89,.25)}
 .valico .deck-color{width:2.6rem;height:2.6rem;font-size:1.2rem}
 .valico .vname{font-family:"Cinzel",serif;letter-spacing:.1em;color:var(--gold-bright)}
+.valico .valico-status{font-size:.68rem;color:var(--muted);text-align:center}
+.valico.has-save{border-color:var(--gold-dim)}
+.valico-new{margin-top:.15rem;font:inherit;font-size:.65rem;background:none;color:var(--muted);
+  border:1px solid var(--line);border-radius:6px;padding:.15rem .45rem;cursor:pointer;transition:color .15s,border-color .15s}
+.valico-new:hover{color:var(--gold-bright);border-color:var(--gold)}
 
 .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:2.4rem 1rem;
   max-width:780px;margin:1.4rem auto}
@@ -135,5 +153,5 @@ require __DIR__ . '/partials/header.php';
   text-align:center;text-transform:uppercase;font-size:.78rem}
 </style>
 
-<script src="/assets/campaign.js?v=stdcard2"></script>
+<script src="/assets/campaign.js?v=multisave2"></script>
 <?php require __DIR__ . '/partials/footer.php'; ?>

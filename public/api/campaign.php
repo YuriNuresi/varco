@@ -195,6 +195,25 @@ function valleys_view(array $progress): array
     return $out;
 }
 
+/** Riepilogo compatto di UNA run (per la schermata "scegli il tuo valico"). */
+function campaign_summary(array $c): array
+{
+    $progress = $c['progress'] ?? empty_progress();
+    $done = 0;
+    $total = 0;
+    foreach (Scenarios::VALLEYS as $v) {
+        $t = Scenarios::totalSteps($v);
+        $total += $t;
+        $done  += min((int) ($progress[$v] ?? 0), $t);
+    }
+    return [
+        'phase'     => $c['phase'] ?? 'hub',
+        'deck_size' => count($c['deck'] ?? []),
+        'done'      => $done,
+        'total'     => $total,
+    ];
+}
+
 /** Vista JSON dello stato campagna (consumata da campaign.php / campaign.js). */
 function campaign_view(): array
 {
@@ -393,9 +412,38 @@ switch ($action) {
         json_out(campaign_view());
     }
 
+    case 'LIST': {
+        $raw = campaign_store_list_raw();
+        $saves = [];
+        foreach (CAMPAIGN_SAVE_COLORS as $col) {
+            $saves[$col] = $raw[$col] !== null ? campaign_summary($raw[$col]) : null;
+        }
+        $active = camp();
+        json_out([
+            'ok'     => true,
+            'saves'  => $saves,
+            'active' => $active ? strtoupper(substr((string) ($active['color'] ?? ''), 0, 1)) : null,
+        ]);
+    }
+
+    case 'SWITCH': {
+        $color = strtoupper(substr((string) ($in['color'] ?? ''), 0, 1));
+        if (!in_array($color, CAMPAIGN_SAVE_COLORS, true)) { json_err('Colore non valido (W/U/B/R/G)'); }
+
+        $c = campaign_store_load($color);
+        if (!$c) { json_err('Nessun salvataggio per questo valico'); }
+        if (($c['phase'] ?? '') === 'fighting') { $c['phase'] = 'hub'; } // la battaglia vive solo in sessione
+
+        $_SESSION['campaign'] = $c;
+        campaign_store_set_active($color);
+        json_out(campaign_view());
+    }
+
     case 'RESET': {
+        $c = camp();
+        $color = $c ? strtoupper(substr((string) ($c['color'] ?? ''), 0, 1)) : null;
         unset($_SESSION['campaign']);
-        campaign_store_save(null);   // cancella anche il salvataggio persistente
+        if ($color) { campaign_store_save(null, $color); } // cancella solo il salvataggio di QUESTA run
         json_out(['ok' => true, 'phase' => 'none']);
     }
 

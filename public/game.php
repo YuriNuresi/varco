@@ -27,6 +27,15 @@ function slot_role_html(int $lane, string $side): string {
 ?>
 <section class="battle" data-deck-id="<?= $deckId ?>" data-color="<?= htmlspecialchars($color) ?>" data-campaign="<?= $campaign ?>" data-tutorial="<?= $tutorial ?>" data-hand-size="<?= HAND_SIZE ?>" data-mage-life="<?= MAGE_LIFE ?>" data-mana-cap="<?= MANA_CAP ?>">
 
+    <div id="preload-overlay" class="preload-overlay" hidden>
+        <div class="preload-box">
+            <div class="preload-crest"><?= $crestSvg ?></div>
+            <div class="preload-title">Il varco si apre…</div>
+            <div class="preload-bar"><div class="preload-fill" id="preload-fill"></div></div>
+            <div class="preload-pct" id="preload-pct">0%</div>
+        </div>
+    </div>
+
     <div class="board">
 
         <!-- ===================== AVVERSARIO (in alto) ===================== -->
@@ -116,5 +125,6 @@ function slot_role_html(int $lane, string $side): string {
 <?php endif; ?>
 </section>
 
-<script src="/assets/app.js?v=overlay4"></script>
+<script src="/assets/audio.js?v=dnd7"></script>
+<script src="/assets/app.js?v=preload1"></script>
 <?php require __DIR__ . '/partials/footer.php'; ?>

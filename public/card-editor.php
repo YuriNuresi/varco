@@ -57,6 +57,10 @@ $pageTitle = 'Fucina delle Carte'; require __DIR__ . '/partials/header.php'; ?>
 /* preview immagine */
 #img-preview img{max-width:280px;border-radius:10px;border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.6)}
 
+/* un bottone per generatore: 1 click = 1 chiamata free-tier, non tutte insieme */
+.gen-buttons{display:flex;gap:.5rem;flex-wrap:wrap}
+.gen-buttons .btn:disabled{opacity:.4;cursor:not-allowed}
+
 /* multi-provider gallery */
 .gen-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-top:.8rem}
 @media(max-width:700px){.gen-gallery{grid-template-columns:1fr}}
@@ -162,10 +166,8 @@ $pageTitle = 'Fucina delle Carte'; require __DIR__ . '/partials/header.php'; ?>
                         <label for="f-img-desc">Descrivi l'immagine da generare</label>
                         <textarea id="f-img-desc" rows="3" placeholder="es. Un goblin feroce con armatura di ossa, circondato da fiamme, in una caverna oscura…"></textarea>
                     </div>
-                    <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-top:.6rem">
-                        <button type="button" class="btn" id="btn-gen-img">Genera con 3 motori</button>
-                        <span id="gen-status" class="msg" style="font-size:.85rem"></span>
-                    </div>
+                    <div id="gen-buttons" class="gen-buttons" style="margin-top:.6rem"></div>
+                    <p id="gen-status" class="msg" style="font-size:.85rem"></p>
                     <div id="gen-gallery" class="gen-gallery" style="display:none"></div>
                     <input type="hidden" id="f-image">
                 </div>
@@ -231,6 +233,7 @@ $pageTitle = 'Fucina delle Carte'; require __DIR__ . '/partials/header.php'; ?>
             </select>
         </label>
         <label>Cerca <input type="text" id="search-cards" placeholder="nome carta…"></label>
+        <label><input type="checkbox" id="filter-noimg"> Senza immagine</label>
     </div>
     <div id="card-list" class="card-grid" style="max-height:none">Caricamento…</div>
 </section>
@@ -277,11 +280,13 @@ function renderList() {
   const fc = $('#filter-color').value;
   const fs = $('#filter-subtype').value;
   const fr = $('#filter-rarity').value;
+  const noImgOnly = $('#filter-noimg').checked;
   let filtered = cards;
   if (fc === 'C') filtered = filtered.filter(c => !c.colors || c.colors === '');
   else if (fc) filtered = filtered.filter(c => (c.colors || '').includes(fc));
   if (fs) filtered = filtered.filter(c => (c.subtypes || '').includes(fs));
   if (fr) filtered = filtered.filter(c => (c.rarity || 'common') === fr);
+  if (noImgOnly) filtered = filtered.filter(c => !c.image_url);
   if (q) filtered = filtered.filter(c => c.name.toLowerCase().includes(q));
   wrap.innerHTML = '';
   $('#card-count').textContent = filtered.length;
@@ -456,10 +461,7 @@ const COLOR_PALETTES = {
 };
 const PALETTE_COLORLESS = 'muted silver and steel grey palette, pale colorless arcane glow';
 
-$('#btn-gen-img').addEventListener('click', async () => {
-  const name = $('#f-name').value.trim();
-  if (!name) { $('#gen-status').textContent = 'Inserisci almeno il nome.'; $('#gen-status').className = 'msg err'; return; }
-
+function buildImagePrompt(name) {
   const colors = getColors();
   const subtypes = $('#f-subtypes').value.trim();
   const rarity = $('#f-rarity').value;
@@ -478,54 +480,88 @@ $('#btn-gen-img').addEventListener('click', async () => {
     + paletteDesc + ', '
     + 'dramatic cinematic lighting, highly detailed, dark vignette edges, '
     + 'no text, no watermark, no logo, no card frame, portrait composition';
+  return prompt;
+}
 
-  const btn = $('#btn-gen-img');
+// --- Un bottone per generatore: ogni click chiama UN SOLO provider (niente più
+// 3 free-tier bruciate insieme per una singola generazione). ---------------
+let PROVIDERS = {}; // provider -> {ready, reason, until}
+
+function loadProviders() {
+  fetch(API + '?action=providers').then(r => r.json()).then(d => {
+    if (d.ok) { PROVIDERS = d.providers || {}; renderGenButtons(); }
+  });
+}
+
+function renderGenButtons() {
+  const wrap = $('#gen-buttons');
+  wrap.innerHTML = '';
+  Object.entries(PROVIDERS).forEach(([prov, state]) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn';
+    btn.dataset.prov = prov;
+    btn.textContent = PROV_LABELS[prov] || prov;
+    if (!state.ready) {
+      btn.disabled = true;
+      btn.title = 'In pausa: ' + (state.reason || 'non disponibile ora');
+    }
+    btn.addEventListener('click', () => generateWith(prov));
+    wrap.appendChild(btn);
+  });
+}
+
+async function generateWith(prov) {
+  const name = $('#f-name').value.trim();
   const status = $('#gen-status');
+  if (!name) { status.textContent = 'Inserisci almeno il nome.'; status.className = 'msg err'; return; }
+
+  const prompt = buildImagePrompt(name);
+  const btn = $('#gen-buttons').querySelector(`[data-prov="${prov}"]`);
   const gallery = $('#gen-gallery');
-  btn.disabled = true;
-  gallery.style.display = 'none';
-  gallery.innerHTML = '';
-  status.textContent = 'Generazione con tutti i motori disponibili… (30-60s)';
+  if (btn) btn.disabled = true;
+  gallery.style.display = 'grid';
+  status.textContent = 'Generazione con ' + (PROV_LABELS[prov] || prov) + '… (10-60s)';
   status.className = 'msg';
 
   try {
-    const r = await fetch(API + '?action=generate_image_multi', {
+    const r = await fetch(API + '?action=generate_image_one', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ prompt, card_name: name })
+      body: JSON.stringify({ prompt, card_name: name, provider: prov })
     });
     const d = await r.json();
-    if (!d.ok) { status.textContent = 'Errore: ' + (d.error || 'sconosciuto'); status.className = 'msg err'; return; }
-
-    const results = d.results || [];
-    const okCount = results.filter(r => r.ok).length;
-    status.textContent = okCount + '/' + results.length + ' immagini generate — scegli la migliore';
-    status.className = okCount ? 'msg ok' : 'msg err';
-
-    gallery.style.display = 'grid';
-    results.forEach(res => {
-      const div = document.createElement('div');
-      div.className = 'gen-option';
-      if (res.ok) {
-        div.innerHTML = `<div class="prov-label">${PROV_LABELS[res.provider] || res.provider}</div>`
-          + `<img src="${escHtml(res.url)}" alt="${escHtml(res.provider)}">`
-          + `<button type="button" class="btn">Usa questa</button>`;
-        div.querySelector('.btn').addEventListener('click', () => {
-          $('#f-image').value = res.url;
-          previewImage();
-          gallery.querySelectorAll('.gen-option').forEach(o => o.classList.remove('selected'));
-          div.classList.add('selected');
-          status.textContent = 'Selezionata: ' + (PROV_LABELS[res.provider] || res.provider);
-          status.className = 'msg ok';
-        });
-      } else {
-        div.innerHTML = `<div class="prov-label">${PROV_LABELS[res.provider] || res.provider}</div>`
-          + `<div class="prov-error">${escHtml(res.error)}</div>`;
-      }
-      gallery.appendChild(div);
-    });
+    addGenOption(prov, d);
+    status.textContent = d.ok ? 'Immagine generata — usala o prova un altro motore.' : ('Errore: ' + (d.error || 'sconosciuto'));
+    status.className = d.ok ? 'msg ok' : 'msg err';
+    if (!d.ok) loadProviders(); // il provider può essere entrato in cooldown: aggiorna i bottoni
   } catch { status.textContent = 'Errore di rete.'; status.className = 'msg err'; }
-  finally { btn.disabled = false; }
-});
+  finally { if (btn) btn.disabled = !!(PROVIDERS[prov] && !PROVIDERS[prov].ready); }
+}
+
+function addGenOption(prov, res) {
+  const gallery = $('#gen-gallery');
+  const div = document.createElement('div');
+  div.className = 'gen-option';
+  if (res.ok) {
+    div.innerHTML = `<div class="prov-label">${PROV_LABELS[prov] || prov}</div>`
+      + `<img src="${escHtml(res.url)}" alt="${escHtml(prov)}">`
+      + `<button type="button" class="btn">Usa questa</button>`;
+    div.querySelector('.btn').addEventListener('click', () => {
+      $('#f-image').value = res.url;
+      previewImage();
+      gallery.querySelectorAll('.gen-option').forEach(o => o.classList.remove('selected'));
+      div.classList.add('selected');
+      $('#gen-status').textContent = 'Selezionata: ' + (PROV_LABELS[prov] || prov);
+      $('#gen-status').className = 'msg ok';
+    });
+  } else {
+    div.innerHTML = `<div class="prov-label">${PROV_LABELS[prov] || prov}</div>`
+      + `<div class="prov-error">${escHtml(res.error)}</div>`;
+  }
+  gallery.prepend(div); // la più recente in cima
+}
+
+loadProviders();
 
 // --- Salvataggio -------------------------------------------------------------
 $('#card-form').addEventListener('submit', async e => {
@@ -567,6 +603,7 @@ $('#f-image').addEventListener('change', previewImage);
 $('#filter-color').addEventListener('change', renderList);
 $('#filter-subtype').addEventListener('change', renderList);
 $('#filter-rarity').addEventListener('change', renderList);
+$('#filter-noimg').addEventListener('change', renderList);
 let t; $('#search-cards').addEventListener('input', () => { clearTimeout(t); t = setTimeout(renderList, 200); });
 
 loadCards();

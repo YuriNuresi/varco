@@ -447,6 +447,12 @@ switch ($action) {
         $playerDeck = assign_uids($playerDeck);
         $aiDeck     = assign_uids($aiDeck);
 
+        // Immagini di TUTTO il mazzo del giocatore (mano + pesche future): il client le precarica
+        // prima di mostrare il tavolo, così non "pop-ano" a scatti durante il match.
+        $preloadImages = array_values(array_unique(array_filter(array_map(
+            static fn($c) => (string) ($c['image_url'] ?? ''), $playerDeck
+        ))));
+
         shuffle($playerDeck);
         shuffle($aiDeck);
         $playerHand = array_splice($playerDeck, 0, HAND_SIZE);
@@ -494,6 +500,7 @@ switch ($action) {
             'remaining_budget' => MANA_CAP, 'mage_life' => MAGE_LIFE, 'mana_cap' => MANA_CAP,
             'lanes' => LANES, 'ai_hand_count' => count($aiHand),
             'player_deck_count' => count($playerDeck),
+            'preload_images' => $preloadImages,
             'prompt' => 'Round 1 — Corsia 0: ATTACCHI tu. Scegli una creatura.',
         ], life_meta($_SESSION['match'])));
     }
