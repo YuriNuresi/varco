@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "varco-dev",
-      "runtimeExecutable": "php",
+      "runtimeExecutable": "C:\\Users\\yurre\\.config\\herd\\bin\\php84\\php.exe",
       "runtimeArgs": ["-S", "localhost:8080", "-t", "public"],
       "port": 8080
     }
