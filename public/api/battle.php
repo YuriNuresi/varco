@@ -26,6 +26,10 @@ require_once __DIR__ . '/../../src/Engine.php';
 require_once __DIR__ . '/../../src/AI.php';
 require_once __DIR__ . '/../../src/Logger.php';
 require_once __DIR__ . '/../../src/Scenarios.php';
+require_once __DIR__ . '/../../src/campaign_store.php';
+
+// sessione persa fra hub e battaglia? riprendi la campagna dal DB
+campaign_restore_session();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_err('Solo POST', 405);
@@ -84,7 +88,7 @@ function build_curved_deck(string $color, int $size): array
     if (!in_array($color, ['W', 'U', 'B', 'R', 'G'], true)) { return []; }
 
     $stmt = db()->prepare('SELECT * FROM ' . TBL_CARDS
-        . ' WHERE enabled = 1 AND colors LIKE ? ORDER BY RAND() LIMIT 400');
+        . " WHERE enabled = 1 AND source = 'custom' AND colors LIKE ? ORDER BY RAND() LIMIT 400");
     $stmt->execute(['%' . $color . '%']);
     $cands = array_map([Engine::class, 'card'], $stmt->fetchAll());
     if (count($cands) < HAND_SIZE) { return []; }
@@ -97,7 +101,7 @@ function campaign_card_query(string $color, string $tribe, array $rarities, int 
 {
     $rarities = $rarities ?: ['common'];
     $place = implode(',', array_fill(0, count($rarities), '?'));
-    $sql   = 'SELECT * FROM ' . TBL_CARDS . ' WHERE enabled = 1 AND colors LIKE ?'
+    $sql   = 'SELECT * FROM ' . TBL_CARDS . " WHERE enabled = 1 AND source = 'custom' AND colors LIKE ?"
            . ' AND rarity IN (' . $place . ') AND power <= ? AND mana_value <= ?';
     $args  = array_merge(['%' . $color . '%'], $rarities, [$maxPower, $maxMv]);
     if ($tribe !== '') { $sql .= ' AND FIND_IN_SET(?, subtypes)'; $args[] = $tribe; }
@@ -443,6 +447,12 @@ switch ($action) {
         $playerDeck = assign_uids($playerDeck);
         $aiDeck     = assign_uids($aiDeck);
 
+        // Immagini di TUTTO il mazzo del giocatore (mano + pesche future): il client le precarica
+        // prima di mostrare il tavolo, così non "pop-ano" a scatti durante il match.
+        $preloadImages = array_values(array_unique(array_filter(array_map(
+            static fn($c) => (string) ($c['image_url'] ?? ''), $playerDeck
+        ))));
+
         shuffle($playerDeck);
         shuffle($aiDeck);
         $playerHand = array_splice($playerDeck, 0, HAND_SIZE);
@@ -470,6 +480,7 @@ switch ($action) {
         // In campagna: marca lo stato come "in battaglia" (FINISH assegnerà il bottino alla vittoria).
         if ($campaignColor !== null && isset($_SESSION['campaign'])) {
             $_SESSION['campaign']['phase'] = 'fighting';
+            campaign_store_save($_SESSION['campaign']);
         }
 
         Logger::log([
@@ -489,6 +500,7 @@ switch ($action) {
             'remaining_budget' => MANA_CAP, 'mage_life' => MAGE_LIFE, 'mana_cap' => MANA_CAP,
             'lanes' => LANES, 'ai_hand_count' => count($aiHand),
             'player_deck_count' => count($playerDeck),
+            'preload_images' => $preloadImages,
             'prompt' => 'Round 1 — Corsia 0: ATTACCHI tu. Scegli una creatura.',
         ], life_meta($_SESSION['match'])));
     }

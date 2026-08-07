@@ -15,3 +15,6 @@ cli_*.php
 # Cache PHP
 __pycache__/
 *.pyc
+
+# Bulk Scryfall (170MB, scaricabile: scripts/import_scryfall.php)
+scripts/oracle_cards.json

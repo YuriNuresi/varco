@@ -7,5 +7,15 @@
     </p>
     <p class="legal-small">Progetto fan non commerciale, mai monetizzato.</p>
 </footer>
+
+<!-- Barra musicale di sottofondo (base: player footer di portale3d, tema oro) -->
+<div class="player" id="varco-player" hidden>
+    <button class="pbtn" id="pPlay" aria-label="Play / Pausa">▶</button>
+    <div class="eqm paused" id="pEq"><i></i><i></i><i></i><i></i></div>
+    <div class="ptit"><b>VARCO</b><span id="pTitle">Musica</span></div>
+    <button class="pbtn" id="pSkip" aria-label="Traccia successiva">⏭</button>
+    <div class="vol">VOL <input type="range" id="pVol" min="0" max="100" value="15" aria-label="Volume"><span id="pVolN">15</span></div>
+</div>
+<script src="/assets/player.js?v=dnd7"></script>
 </body>
 </html>

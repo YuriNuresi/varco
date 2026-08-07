@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS magic_cards (
   rarity       VARCHAR(12)  NOT NULL DEFAULT 'common',
   image_url    VARCHAR(255) DEFAULT NULL,
   enabled      TINYINT(1)   NOT NULL DEFAULT 1,
-  INDEX (enabled), INDEX (mana_value), INDEX (colors), INDEX (rarity)
+  source       VARCHAR(10)  NOT NULL DEFAULT 'scryfall',
+  INDEX (enabled), INDEX (mana_value), INDEX (colors), INDEX (rarity), INDEX (source)
 );
 
 CREATE TABLE IF NOT EXISTS magic_decks (

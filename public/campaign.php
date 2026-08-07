@@ -8,6 +8,14 @@ require __DIR__ . '/partials/header.php';
 <section class="campaign"
          data-draft-options="<?= CAMPAIGN_DRAFT_OPTIONS ?>" data-draft-pick="<?= CAMPAIGN_DRAFT_PICK ?>"
          data-reward-pick="<?= CAMPAIGN_REWARD_PICK ?>">
+    <div id="camp-preload" class="preload-overlay camp-preload" hidden>
+        <div class="preload-box">
+            <div class="preload-title">Preparo le carte…</div>
+            <div class="preload-bar"><div class="preload-fill" id="camp-preload-fill"></div></div>
+            <div class="preload-pct" id="camp-preload-pct">0%</div>
+        </div>
+    </div>
+
     <div id="camp-root" class="camp-root">
         <p class="hint">Carico la valle…</p>
     </div>
@@ -15,6 +23,11 @@ require __DIR__ . '/partials/header.php';
 
 <style>
 .camp-root{margin-top:1rem}
+/* variante dell'overlay di preload (condiviso con game.php) per lo sfondo della campagna, non l'arena */
+.camp-preload{background:
+    radial-gradient(120% 80% at 50% -8%, rgba(42,28,70,.68) 0%, rgba(21,14,40,.80) 42%, rgba(10,6,20,.90) 72%, rgba(6,4,16,.96) 100%),
+    url('/assets/bg/void.png') center top / cover no-repeat fixed,
+    var(--void)}
 .camp-head{text-align:center;margin-bottom:1.3rem}
 .camp-head h1{font-family:"Cinzel",serif;color:var(--gold-bright);font-size:2.1rem;margin:.2rem 0}
 .camp-sub{color:var(--muted);font-style:italic}
@@ -29,22 +42,34 @@ require __DIR__ . '/partials/header.php';
 .valico:hover{transform:translateY(-3px);border-color:var(--gold);box-shadow:0 0 18px rgba(196,162,89,.25)}
 .valico .deck-color{width:2.6rem;height:2.6rem;font-size:1.2rem}
 .valico .vname{font-family:"Cinzel",serif;letter-spacing:.1em;color:var(--gold-bright)}
+.valico .valico-status{font-size:.68rem;color:var(--muted);text-align:center}
+.valico.has-save{border-color:var(--gold-dim)}
+.valico-new{margin-top:.15rem;font:inherit;font-size:.65rem;background:none;color:var(--muted);
+  border:1px solid var(--line);border-radius:6px;padding:.15rem .45rem;cursor:pointer;transition:color .15s,border-color .15s}
+.valico-new:hover{color:var(--gold-bright);border-color:var(--gold)}
 
-.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:2.4rem 1rem;
   max-width:780px;margin:1.4rem auto}
 .pick-card{position:relative;cursor:pointer;border-radius:10px;transition:transform .15s;
   outline:2px solid transparent;outline-offset:3px}
+/* Carte del picker TUTTE uguali: area immagine ad aspect-ratio fisso (object-fit:cover ritaglia),
+   così header/footer/stats si allineano fra le carte qualunque sia il formato dell'illustrazione. */
+.pick-card .card{height:100%}
+.pick-card .card-image{flex:none;aspect-ratio:3/4;min-height:0}
+.pick-card .card-image.noimg{aspect-ratio:3/4;min-height:0}
 .pick-card:hover{transform:translateY(-4px)}
 .pick-card.sel{outline-color:var(--gold-bright);box-shadow:0 0 22px rgba(236,210,141,.5)}
 .pick-card.sel::after{content:"✓";position:absolute;top:-12px;right:-12px;z-index:6;
   width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
   background:linear-gradient(180deg,#ecd28d,#c4a259);color:#150f08;font-weight:700;
   box-shadow:0 0 0 2px var(--ink),0 3px 8px rgba(0,0,0,.6)}
-.pick-card .rar{position:absolute;left:6px;top:6px;z-index:6;font-family:"Cinzel",serif;font-size:.6rem;
-  letter-spacing:.1em;text-transform:uppercase;padding:.1rem .4rem;border-radius:4px;
-  background:rgba(8,5,16,.85);border:1px solid var(--gold-dim);color:var(--parch)}
-.pick-card .rar.r-rare{color:var(--gold-bright);border-color:var(--gold)}
-.pick-card .rar.r-mythic{color:#ff9a55;border-color:#ff9a55}
+/* Carta consigliata dal mago nel draft: alone dorato + bollino 👍 (la selezione resta prioritaria). */
+.pick-card.advised{box-shadow:0 0 0 2px var(--gold-bright),0 0 18px rgba(236,210,141,.4)}
+/* Bollino SOTTO la carta, centrato (dentro la carta copriva le icone abilità). */
+.pick-card .advised-tag{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:.35rem;
+  z-index:6;font-size:1rem;line-height:1;
+  background:rgba(8,5,16,.85);border:1px solid var(--gold);border-radius:6px;padding:.12rem .3rem;
+  box-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none}
 
 .camp-bar{display:flex;gap:.8rem;justify-content:center;align-items:center;flex-wrap:wrap;margin:1.4rem 0}
 .deck-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:.5rem;
@@ -128,5 +153,5 @@ require __DIR__ . '/partials/header.php';
   text-align:center;text-transform:uppercase;font-size:.78rem}
 </style>
 
-<script src="/assets/campaign.js?v=5-ruin"></script>
+<script src="/assets/campaign.js?v=multisave2"></script>
 <?php require __DIR__ . '/partials/footer.php'; ?>

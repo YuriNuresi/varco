@@ -64,6 +64,19 @@ strong{color:var(--gold-bright);font-weight:600}
 /* assicura che i contenuti stiano sopra lo sfondo */
 .topbar,.container,.legal{position:relative;z-index:2}
 
+/* ===== hamburger (solo in battaglia) ===== */
+.hamburger{display:none}
+.page-battle .hamburger{display:flex;align-items:center;justify-content:center;
+  position:fixed;top:.55rem;left:.55rem;z-index:101;width:2.2rem;height:2.2rem;
+  border:1px solid var(--gold-dim);border-radius:6px;background:rgba(8,5,16,.82);
+  color:var(--gold-bright);font-size:1.2rem;cursor:pointer;backdrop-filter:blur(4px);
+  box-shadow:0 3px 10px rgba(0,0,0,.6);transition:background .15s,border-color .15s}
+.page-battle .hamburger:hover{border-color:var(--gold);background:rgba(26,18,48,.9)}
+.page-battle .topbar{display:none;flex-direction:column;position:fixed;top:0;left:0;right:0;z-index:100;
+  animation:topbar-in .2s ease-out}
+.page-battle .topbar.open{display:flex}
+@keyframes topbar-in{from{opacity:0;transform:translateY(-100%)}to{opacity:1;transform:none}}
+
 /* ===== topbar / nav ===== */
 .topbar{display:flex;align-items:center;gap:1.6rem;padding:.7rem 1.4rem;
   background:linear-gradient(180deg,rgba(20,13,38,.92),rgba(10,7,20,.86));
@@ -149,34 +162,85 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.5);transform:non
 .msg{min-height:1.2em;font-size:.95rem;font-style:italic}
 .msg.ok{color:var(--win)} .msg.err{color:var(--lose)}
 
-/* mini-card (immagine = carta, cornice dorata) */
+/* mini-card (layout uguale a play-card) */
 .mini-card{position:relative;padding:0;overflow:hidden;border-radius:7px;
-  background:var(--panel-solid);border:1px solid var(--gold-dim);border-left:none;
+  background:var(--panel-solid);border:2px solid var(--gold-dim);
   box-shadow:0 6px 16px rgba(0,0,0,.5);transition:.16s}
 .mini-card:hover{border-color:var(--gold);box-shadow:0 0 16px rgba(196,162,89,.22),0 8px 18px rgba(0,0,0,.5)}
-.mini-card.c-W,.mini-card.c-U,.mini-card.c-B,.mini-card.c-R,.mini-card.c-G{border-left:none}
+.mini-card.noimg{min-height:180px}
+/* bordi colorati monocromatici */
+.mini-card.c-W{border-color:rgba(233,223,192,.7)}
+.mini-card.c-U{border-color:rgba(59,123,209,.7)}
+.mini-card.c-B{border-color:rgba(106,100,112,.7)}
+.mini-card.c-R{border-color:rgba(212,80,74,.7)}
+.mini-card.c-G{border-color:rgba(63,165,90,.7)}
+.mini-card.c-C{border-color:rgba(154,160,176,.7)}
+/* bordi bicolore con sfumatura */
+.mini-card.c-WU{border-image:linear-gradient(135deg,rgba(233,223,192,.7),rgba(59,123,209,.7)) 1}
+.mini-card.c-WB{border-image:linear-gradient(135deg,rgba(233,223,192,.7),rgba(106,100,112,.7)) 1}
+.mini-card.c-WR{border-image:linear-gradient(135deg,rgba(233,223,192,.7),rgba(212,80,74,.7)) 1}
+.mini-card.c-WG{border-image:linear-gradient(135deg,rgba(233,223,192,.7),rgba(63,165,90,.7)) 1}
+.mini-card.c-UB{border-image:linear-gradient(135deg,rgba(59,123,209,.7),rgba(106,100,112,.7)) 1}
+.mini-card.c-UR{border-image:linear-gradient(135deg,rgba(59,123,209,.7),rgba(212,80,74,.7)) 1}
+.mini-card.c-UG{border-image:linear-gradient(135deg,rgba(59,123,209,.7),rgba(63,165,90,.7)) 1}
+.mini-card.c-BR{border-image:linear-gradient(135deg,rgba(106,100,112,.7),rgba(212,80,74,.7)) 1}
+.mini-card.c-BG{border-image:linear-gradient(135deg,rgba(106,100,112,.7),rgba(63,165,90,.7)) 1}
+.mini-card.c-RG{border-image:linear-gradient(135deg,rgba(212,80,74,.7),rgba(63,165,90,.7)) 1}
 .mc-imgwrap{position:relative;background:var(--ink);line-height:0}
 .mc-img{width:100%;display:block;aspect-ratio:488/680;object-fit:cover}
-.mc-imgwrap .mc-cost{position:absolute;top:5px;left:5px;background:rgba(8,5,16,.82);color:var(--spectral-soft);
-  border:1px solid var(--gold-dim)}
 .mc-imgwrap.noimg{min-height:124px;display:grid;place-items:center}
-.mc-top{display:flex;justify-content:space-between;gap:.3rem;font-weight:600}
-.mc-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mc-cost{font-family:"Cinzel",serif;background:var(--ink);border-radius:50%;width:1.5rem;height:1.5rem;
-  display:grid;place-items:center;flex:none;font-weight:700}
-.mc-pt{color:var(--muted)}
-.mc-meta{padding:.45rem .55rem;font-size:.85rem}
-.mc-meta .mc-name{display:block;font-family:"Cinzel",serif;font-size:.78rem;letter-spacing:.04em;font-weight:600;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mc-meta .mc-pt{color:var(--muted)}
-.mc-meta em{font-style:normal}
+/* gemma rarità - sopra la card */
+.mini-card .mc-gem-overlay{position:absolute;top:-10px;left:5px;z-index:7;}
+/* header overlay nome */
+.mini-card .mc-name-overlay{position:absolute;top:0;left:0;right:0;z-index:5;
+  padding:.25rem .4rem .25rem 1.8rem;font-family:"Cinzel",serif;font-weight:600;font-size:.65rem;
+  letter-spacing:.04em;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background:linear-gradient(180deg,rgba(8,5,16,.82),rgba(8,5,16,.45) 80%,transparent);
+  text-shadow:0 1px 3px #000;border-radius:7px 7px 0 0}
+/* header overlay colorato per colore carta */
+.mini-card.c-W .mc-name-overlay{background:linear-gradient(180deg,rgba(233,223,192,.65),rgba(233,223,192,.35) 80%,transparent)}
+.mini-card.c-U .mc-name-overlay{background:linear-gradient(180deg,rgba(59,123,209,.65),rgba(59,123,209,.35) 80%,transparent)}
+.mini-card.c-B .mc-name-overlay{background:linear-gradient(180deg,rgba(106,100,112,.65),rgba(106,100,112,.35) 80%,transparent)}
+.mini-card.c-R .mc-name-overlay{background:linear-gradient(180deg,rgba(212,80,74,.65),rgba(212,80,74,.35) 80%,transparent)}
+.mini-card.c-G .mc-name-overlay{background:linear-gradient(180deg,rgba(63,165,90,.65),rgba(63,165,90,.35) 80%,transparent)}
+.mini-card.c-C .mc-name-overlay{background:linear-gradient(180deg,rgba(154,160,176,.65),rgba(154,160,176,.35) 80%,transparent)}
+.mini-card.c-WU .mc-name-overlay{background:linear-gradient(180deg,rgba(233,223,192,.65) 0%,rgba(59,123,209,.65) 100%)}
+.mini-card.c-WB .mc-name-overlay{background:linear-gradient(180deg,rgba(233,223,192,.65) 0%,rgba(106,100,112,.65) 100%)}
+.mini-card.c-WR .mc-name-overlay{background:linear-gradient(180deg,rgba(233,223,192,.65) 0%,rgba(212,80,74,.65) 100%)}
+.mini-card.c-WG .mc-name-overlay{background:linear-gradient(180deg,rgba(233,223,192,.65) 0%,rgba(63,165,90,.65) 100%)}
+.mini-card.c-UB .mc-name-overlay{background:linear-gradient(180deg,rgba(59,123,209,.65) 0%,rgba(106,100,112,.65) 100%)}
+.mini-card.c-UR .mc-name-overlay{background:linear-gradient(180deg,rgba(59,123,209,.65) 0%,rgba(212,80,74,.65) 100%)}
+.mini-card.c-UG .mc-name-overlay{background:linear-gradient(180deg,rgba(59,123,209,.65) 0%,rgba(63,165,90,.65) 100%)}
+.mini-card.c-BR .mc-name-overlay{background:linear-gradient(180deg,rgba(106,100,112,.65) 0%,rgba(212,80,74,.65) 100%)}
+.mini-card.c-BG .mc-name-overlay{background:linear-gradient(180deg,rgba(106,100,112,.65) 0%,rgba(63,165,90,.65) 100%)}
+.mini-card.c-RG .mc-name-overlay{background:linear-gradient(180deg,rgba(212,80,74,.65) 0%,rgba(63,165,90,.65) 100%)}
+/* cost overlay top-left */
+.mini-card .mc-cost-overlay{position:absolute;top:-5px;left:-5px;z-index:5;width:1.5rem;height:1.5rem;
+  display:grid;place-items:center;font-family:"Cinzel",serif;font-weight:700;font-size:.85rem;
+  color:#eaf6ff;border-radius:50%;
+  background:radial-gradient(circle at 36% 30%,#bfeefc,#2f7fb0 52%,#13405e);
+  box-shadow:0 0 0 1.5px var(--gold),0 0 10px rgba(79,207,224,.45),0 3px 7px rgba(0,0,0,.6);
+  text-shadow:0 1px 2px #000}
+/* keywords overlay bottom-left */
+.mini-card .mc-kw-overlay{position:absolute;bottom:38px;left:5px;z-index:5;
+  font-size:.9rem;line-height:1;display:flex;gap:.15em;
+  background:rgba(8,5,16,.7);padding:.15rem .3rem;border-radius:4px;
+  box-shadow:0 0 0 1px var(--gold-dim),0 2px 5px rgba(0,0,0,.5)}
+.mini-card .mc-kw-overlay span{filter:drop-shadow(0 1px 2px #000)}
+/* pt overlay bottom-right */
+.mini-card .mc-pt-overlay{position:absolute;right:4px;bottom:38px;z-index:5;font-family:"Cinzel",serif;
+  background:linear-gradient(180deg,#2a2038,#140d22);padding:.08rem .4rem;border-radius:4px;font-weight:700;
+  font-size:.75rem;color:var(--bone);box-shadow:0 0 0 1px var(--gold-dim),0 3px 6px rgba(0,0,0,.6);
+  text-shadow:0 1px 2px #000}
+/* bottone modifica - sempre in basso */
 .mc-btn{margin:0;width:100%;border:0;border-radius:0;cursor:pointer;font-family:"Cinzel",serif;font-weight:700;
-  letter-spacing:.1em;text-transform:uppercase;font-size:.72rem;padding:.4rem;
-  color:#150f08;background:linear-gradient(180deg,#ecd28d,#c4a259)}
+  letter-spacing:.1em;text-transform:uppercase;font-size:.65rem;padding:.3rem;
+  color:#150f08;background:linear-gradient(180deg,#ecd28d,#c4a259);
+  position:absolute;bottom:0;left:0;right:0;z-index:10}
 .mc-btn:hover{background:linear-gradient(180deg,#fff0c4,#d8b86a)}
 .copies-tag{position:absolute;bottom:5px;right:5px;font-family:"Cinzel",serif;font-weight:700;
   background:rgba(8,5,16,.85);color:var(--gold-bright);border:1px solid var(--gold);
-  border-radius:5px;padding:.05rem .45rem;font-size:.8rem}
+  border-radius:5px;padding:.05rem .45rem;font-size:.75rem}
 
 /* gemme rarità */
 .gem{display:inline-block;width:.72rem;height:.72rem;border-radius:50%;vertical-align:middle;
@@ -306,10 +370,11 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.5);transform:non
   box-shadow:0 0 0 1.5px var(--gold),0 0 12px rgba(196,162,89,.35);animation:boon-pulse 1.8s ease-in-out infinite}
 @keyframes boon-pulse{50%{box-shadow:0 0 0 1.5px var(--gold-bright),0 0 18px rgba(236,210,141,.5)}}
 
-/* pannello scelta del dono */
-.boon-pick{margin:.7rem auto 0;max-width:560px;position:relative;z-index:3;text-align:center;
-  background:linear-gradient(180deg,rgba(26,18,48,.96),rgba(12,8,24,.97));border-radius:10px;padding:1rem 1.1rem;
-  box-shadow:0 0 0 1px var(--gold-line),0 0 0 4px rgba(8,5,16,.5),0 18px 40px rgba(0,0,0,.6)}
+/* pannello scelta dono/abilità: OVERLAY fisso centrato (in-flow allungava il corridoio e sfalsava il layout) */
+.boon-pick{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:70;text-align:center;
+  width:min(560px,92vw);max-height:86vh;overflow:auto;margin:0;
+  background:linear-gradient(180deg,rgba(26,18,48,.98),rgba(12,8,24,.99));border-radius:10px;padding:1rem 1.1rem;
+  box-shadow:0 0 0 1px var(--gold-line),0 0 0 4px rgba(8,5,16,.5),0 0 0 100vmax rgba(8,5,16,.55),0 18px 40px rgba(0,0,0,.6)}
 .bp-title{font-family:"Cinzel",serif;letter-spacing:.1em;color:var(--gold-bright);font-size:.95rem;margin-bottom:.8rem}
 .bp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px}
 .bp-card{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:.85rem .5rem;border-radius:8px;
@@ -338,25 +403,60 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.5);transform:non
 /* ===== carta in gioco: cornice dorata attorno all'arte ===== */
 .play-card{position:relative;width:100%;padding:0;overflow:hidden;border-radius:8px;
   background:linear-gradient(180deg,#24193a,#0f0a1c);
-  border:1px solid var(--gold-dim);
+  border:2px solid var(--gold-dim);
   box-shadow:0 12px 24px rgba(0,0,0,.6),inset 0 0 0 1px rgba(0,0,0,.6)}
 .play-card::before{content:"";position:absolute;inset:3px;border:1px solid rgba(196,162,89,.4);
   border-radius:5px;pointer-events:none;z-index:4}
-.play-card.c-W{border-color:rgba(233,223,192,.5)} .play-card.c-U{border-color:rgba(59,123,209,.5)}
-.play-card.c-B{border-color:rgba(106,100,112,.6)} .play-card.c-R{border-color:rgba(212,80,74,.5)}
-.play-card.c-G{border-color:rgba(63,165,90,.5)}
+/* bordi colorati monocromatici */
+.play-card.c-W{border-color:rgba(233,223,192,.7)}
+.play-card.c-U{border-color:rgba(59,123,209,.7)}
+.play-card.c-B{border-color:rgba(106,100,112,.7)}
+.play-card.c-R{border-color:rgba(212,80,74,.7)}
+.play-card.c-G{border-color:rgba(63,165,90,.7)}
+.play-card.c-C{border-color:rgba(154,160,176,.7)}
+/* bordi bicolore con sfumatura */
+.play-card.c-WU{border-image:linear-gradient(135deg,rgba(233,223,192,.7),rgba(59,123,209,.7)) 1}
+.play-card.c-WB{border-image:linear-gradient(135deg,rgba(233,223,192,.7),rgba(106,100,112,.7)) 1}
+.play-card.c-WR{border-image:linear-gradient(135deg,rgba(233,223,192,.7),rgba(212,80,74,.7)) 1}
+.play-card.c-WG{border-image:linear-gradient(135deg,rgba(233,223,192,.7),rgba(63,165,90,.7)) 1}
+.play-card.c-UB{border-image:linear-gradient(135deg,rgba(59,123,209,.7),rgba(106,100,112,.7)) 1}
+.play-card.c-UR{border-image:linear-gradient(135deg,rgba(59,123,209,.7),rgba(212,80,74,.7)) 1}
+.play-card.c-UG{border-image:linear-gradient(135deg,rgba(59,123,209,.7),rgba(63,165,90,.7)) 1}
+.play-card.c-BR{border-image:linear-gradient(135deg,rgba(106,100,112,.7),rgba(212,80,74,.7)) 1}
+.play-card.c-BG{border-image:linear-gradient(135deg,rgba(106,100,112,.7),rgba(63,165,90,.7)) 1}
+.play-card.c-RG{border-image:linear-gradient(135deg,rgba(212,80,74,.7),rgba(63,165,90,.7)) 1}
 .pc-img{width:100%;display:block;border-radius:6px}
-/* Copertura del testo stampato: una fascia sul riquadro-regole con SOLO le nostre icone keyword
-   (il motore usa P/T + 4 keyword; le altre abilità stampate sono ignorate, quindi le nascondiamo). */
-.pc-cover{position:absolute;left:5%;right:5%;top:62.5%;height:21%;z-index:3;
-  display:flex;align-items:center;justify-content:center;gap:.28em;border-radius:5px;
-  background:linear-gradient(180deg,rgba(14,10,24,.9),rgba(8,5,16,.95));
-  border:1px solid rgba(196,162,89,.45);
-  box-shadow:inset 0 0 12px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.5);
-  font-size:clamp(.7rem,2.5vw,1.3rem);line-height:1;overflow:hidden}
-.pc-cover .kw span{filter:drop-shadow(0 1px 2px #000);margin:0 .04em}
-.pc-cover .vanilla{color:var(--gold-dim);font-family:"Cinzel",serif;letter-spacing:.45em;font-size:.62em}
-.play-card.noimg .pc-cover,.play-card.facedown .pc-cover{display:none}
+/* header nome sulla carta in gioco */
+.play-card .pc-name-overlay{position:absolute;top:0;left:0;right:0;z-index:5;
+  padding:.3rem .5rem .3rem 2.2rem;font-family:"Cinzel",serif;font-weight:600;font-size:.72rem;
+  letter-spacing:.04em;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background:linear-gradient(180deg,rgba(8,5,16,.82),rgba(8,5,16,.45) 80%,transparent);
+  text-shadow:0 1px 3px #000;border-radius:7px 7px 0 0}
+/* header con background colorato per colore carta */
+.play-card.c-W .pc-name-overlay{background:linear-gradient(180deg,rgba(233,223,192,.65),rgba(233,223,192,.35) 80%,transparent)}
+.play-card.c-U .pc-name-overlay{background:linear-gradient(180deg,rgba(59,123,209,.65),rgba(59,123,209,.35) 80%,transparent)}
+.play-card.c-B .pc-name-overlay{background:linear-gradient(180deg,rgba(106,100,112,.65),rgba(106,100,112,.35) 80%,transparent)}
+.play-card.c-R .pc-name-overlay{background:linear-gradient(180deg,rgba(212,80,74,.65),rgba(212,80,74,.35) 80%,transparent)}
+.play-card.c-G .pc-name-overlay{background:linear-gradient(180deg,rgba(63,165,90,.65),rgba(63,165,90,.35) 80%,transparent)}
+.play-card.c-C .pc-name-overlay{background:linear-gradient(180deg,rgba(154,160,176,.65),rgba(154,160,176,.35) 80%,transparent)}
+.play-card.c-WU .pc-name-overlay{background:linear-gradient(180deg,rgba(233,223,192,.65) 0%,rgba(59,123,209,.65) 100%)}
+.play-card.c-WB .pc-name-overlay{background:linear-gradient(180deg,rgba(233,223,192,.65) 0%,rgba(106,100,112,.65) 100%)}
+.play-card.c-WR .pc-name-overlay{background:linear-gradient(180deg,rgba(233,223,192,.65) 0%,rgba(212,80,74,.65) 100%)}
+.play-card.c-WG .pc-name-overlay{background:linear-gradient(180deg,rgba(233,223,192,.65) 0%,rgba(63,165,90,.65) 100%)}
+.play-card.c-UB .pc-name-overlay{background:linear-gradient(180deg,rgba(59,123,209,.65) 0%,rgba(106,100,112,.65) 100%)}
+.play-card.c-UR .pc-name-overlay{background:linear-gradient(180deg,rgba(59,123,209,.65) 0%,rgba(212,80,74,.65) 100%)}
+.play-card.c-UG .pc-name-overlay{background:linear-gradient(180deg,rgba(59,123,209,.65) 0%,rgba(63,165,90,.65) 100%)}
+.play-card.c-BR .pc-name-overlay{background:linear-gradient(180deg,rgba(106,100,112,.65) 0%,rgba(212,80,74,.65) 100%)}
+.play-card.c-BG .pc-name-overlay{background:linear-gradient(180deg,rgba(106,100,112,.65) 0%,rgba(63,165,90,.65) 100%)}
+.play-card.c-RG .pc-name-overlay{background:linear-gradient(180deg,rgba(212,80,74,.65) 0%,rgba(63,165,90,.65) 100%)}
+.play-card.noimg .pc-name-overlay,.play-card.facedown .pc-name-overlay{display:none}
+/* keyword badge in basso a sinistra */
+.play-card .pc-kw-overlay{position:absolute;bottom:5px;left:5px;z-index:5;
+  font-size:1.05rem;line-height:1;display:flex;gap:.15em;
+  background:rgba(8,5,16,.7);padding:.15rem .35rem;border-radius:5px;
+  box-shadow:0 0 0 1px var(--gold-dim),0 2px 5px rgba(0,0,0,.5)}
+.play-card .pc-kw-overlay span{filter:drop-shadow(0 1px 2px #000)}
+.play-card.noimg .pc-kw-overlay,.play-card.facedown .pc-kw-overlay{display:none}
 .pc-fallback{display:none;padding:.6rem}
 .play-card.noimg .pc-fallback{display:block}
 .play-card.noimg{padding:.5rem}
@@ -369,14 +469,38 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.5);transform:non
 .play-card.facedown{min-height:96px;border-radius:7px;
   background:var(--mtg-back) center/cover no-repeat,linear-gradient(155deg,#241838,#130c22)}
 
+/* ===== carta STANDARD nelle piazzole (placeCard usa cardMarkup → .card) =====
+   La .card non ha larghezza intrinseca: dentro la piazzola va vincolata, altrimenti
+   esplode alla dimensione naturale dell'immagine. Aspect-ratio fisso = carte tutte uguali. */
+.slot .card{width:100%;max-width:170px;aspect-ratio:3/4}
+.slot .card .card-image{min-height:0}
+.slot .card.noimg{min-height:0}
+.slot .card .card-name{font-size:.66rem}
+/* il badge PARA/SUBISCE non deve coprire l'header della carta standard */
+.slot .card .lane-badge{top:30px}
+
 /* mano del giocatore */
 .hand-area{margin-top:1.1rem;display:flex;align-items:flex-end;justify-content:center;gap:18px;flex-wrap:wrap}
-.hand{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:.6rem}
-.hand-card{width:120px;cursor:default;transition:transform .16s,box-shadow .16s}
-.hand-card.playable{cursor:pointer}
+.hand{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:.6rem;justify-content:center}
+.hand-card{width:120px;flex:none;cursor:default;transition:transform .16s,box-shadow .16s}
+/* area immagine della carta in mano: aspetto fisso, niente altezze naturali "a caso" */
+.hand-card .card-image{flex:none;aspect-ratio:3/4;min-height:0}
+.hand-card.playable{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+.hand-card.playable *{-webkit-user-drag:none;-webkit-user-select:none;user-select:none}
 .hand-card.playable:hover{transform:translateY(-8px) scale(1.05);z-index:10;
   box-shadow:0 18px 30px rgba(0,0,0,.7),0 0 0 1px var(--gold),0 0 22px rgba(196,162,89,.3)}
 .hand-card.unaffordable{opacity:.4}
+/* drag&drop: la carta trascinata (ghost segue il dito/mouse); l'originale resta sbiadito */
+.hand-card.dragging{opacity:.32;transform:none !important;box-shadow:none}
+/* specificità .card.drag-ghost (0,2,0): deve battere .card{position:relative} definito più sotto */
+.card.drag-ghost{position:fixed;left:0;top:0;width:120px;margin:0;pointer-events:none;z-index:9999;
+  transform:translate(-50%,-52%) rotate(-5deg);opacity:.95;cursor:grabbing;transition:none;
+  box-shadow:0 22px 46px rgba(0,0,0,.7),0 0 0 1px var(--gold),0 0 26px rgba(196,162,89,.35)}
+/* piazzola-bersaglio: evidenziata durante il trascinamento, più intensa quando ci sei sopra */
+.slot.drop-target{border-style:solid;border-color:var(--gold-dim);
+  box-shadow:0 0 0 2px rgba(196,162,89,.22) inset}
+.slot.drop-over{border-color:var(--gold);background:rgba(196,162,89,.08);
+  box-shadow:0 0 0 3px rgba(196,162,89,.5) inset,0 0 24px rgba(196,162,89,.3)}
 /* animazione di pesca: la carta entra "girandosi" dal mazzetto */
 .hand-card.dealing{animation:deal .55s cubic-bezier(.2,.8,.25,1) backwards}
 @keyframes deal{
@@ -435,9 +559,13 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.5);transform:non
   border:1px solid var(--gold-line,var(--line));border-radius:10px;
   box-shadow:0 0 0 4px rgba(8,5,16,.5),0 18px 40px rgba(0,0,0,.6)}
 .choice-bar .btn{width:100%;text-align:center}
-.lane-choice{display:flex;flex-direction:column;gap:.4rem;margin-bottom:.5rem;padding:.5rem;
-  background:linear-gradient(180deg,rgba(26,18,48,.9),rgba(12,8,24,.9));
-  border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.5)}
+/* Para/Subisci: OVERLAY sopra la carta della corsia (in-flow sfalsava tutto il layout sotto) */
+.lane-choice{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;
+  width:max-content;min-width:118px;max-width:94%;
+  display:flex;flex-direction:column;gap:.4rem;margin:0;padding:.5rem;
+  background:linear-gradient(180deg,rgba(26,18,48,.96),rgba(12,8,24,.97));
+  border:1px solid var(--gold);border-radius:8px;
+  box-shadow:0 0 0 3px rgba(8,5,16,.55),0 10px 26px rgba(0,0,0,.65)}
 .lane-choice .btn{width:100%;text-align:center;font-size:.74rem;padding:.45rem .3rem}
 
 /* badge sulle carte in corsia */
@@ -448,21 +576,30 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.5);transform:non
 .lane-badge.b-atk{background:linear-gradient(180deg,#2a2038,#140d22);color:var(--gold-bright);box-shadow:0 0 0 1px var(--gold-dim)}
 .lane-badge.b-dmg{top:auto;bottom:6px;left:6px;right:6px;text-align:center;background:rgba(8,5,16,.82)}
 
-/* stato carta: attacca il mago / scontro / morta / ferita */
-.play-card.attacking{border-color:var(--ember);
+/* stato carta: attacca il mago / scontro / morta / ferita (vale per .play-card E per la .card standard in corsia) */
+.play-card.attacking,.slot .card.attacking{border-color:var(--ember);
   box-shadow:0 12px 24px rgba(0,0,0,.6),0 0 0 1px var(--ember),0 0 24px var(--ember-glow)}
-.play-card.clashing{border-color:var(--spectral);
+.play-card.clashing,.slot .card.clashing{border-color:var(--spectral);
   box-shadow:0 12px 24px rgba(0,0,0,.6),0 0 0 1px var(--spectral),0 0 24px var(--spectral-glow)}
-.play-card.dead{filter:grayscale(.85) brightness(.55)}
-.play-card.dead::after{content:"☠ MORTA";position:absolute;top:50%;left:50%;
+.play-card.dead,.slot .card.dead{filter:grayscale(.85) brightness(.55)}
+.play-card.dead::after,.slot .card.dead::after{content:"☠ MORTA";position:absolute;top:50%;left:50%;
   transform:translate(-50%,-50%) rotate(-9deg);z-index:7;font-family:"Cinzel",serif;font-weight:700;
   letter-spacing:.12em;padding:.25rem .8rem;font-size:.95rem;color:#e9cdc6;
   background:linear-gradient(180deg,#5c1a12,#2a0c08);box-shadow:0 0 0 1px var(--blood),0 6px 14px rgba(0,0,0,.7);border-radius:3px}
-.play-card.wounded{box-shadow:0 12px 24px rgba(0,0,0,.6),0 0 0 1px var(--blood) inset}
-.pt-wounded{color:var(--blood-soft);font-weight:800}
+.play-card.wounded,.slot .card.wounded{box-shadow:0 12px 24px rgba(0,0,0,.6),0 0 0 1px var(--blood) inset}
+.pt-wounded{color:#ff3b30;font-weight:800;text-shadow:0 0 7px rgba(255,59,48,.55)}
 .play-card .pc-pt-overlay{position:absolute;right:5px;bottom:5px;z-index:5;font-family:"Cinzel",serif;
-  background:linear-gradient(180deg,#2a2038,#140d22);padding:.08rem .45rem;border-radius:5px;font-weight:700;
-  font-size:1rem;box-shadow:0 0 0 1.5px var(--gold-dim)}
+  background:linear-gradient(180deg,#2a2038,#140d22);padding:.12rem .55rem;border-radius:5px;font-weight:700;
+  font-size:1.05rem;color:var(--bone);box-shadow:0 0 0 1.5px var(--gold),0 3px 7px rgba(0,0,0,.6);
+  text-shadow:0 1px 2px #000}
+.play-card.noimg .pc-pt-overlay,.play-card.facedown .pc-pt-overlay{display:none}
+.play-card .pc-cost-overlay{position:absolute;top:-5px;left:-5px;z-index:5;width:1.85rem;height:1.85rem;
+  display:grid;place-items:center;font-family:"Cinzel",serif;font-weight:700;font-size:1rem;
+  color:#eaf6ff;border-radius:50%;
+  background:radial-gradient(circle at 36% 30%,#bfeefc,#2f7fb0 52%,#13405e);
+  box-shadow:0 0 0 1.5px var(--gold),0 0 10px rgba(79,207,224,.45),0 3px 7px rgba(0,0,0,.6);
+  text-shadow:0 1px 2px #000}
+.play-card.noimg .pc-cost-overlay,.play-card.facedown .pc-cost-overlay{display:none}
 
 /* numero grande dei danni */
 .dmg-big{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:8;
@@ -477,7 +614,86 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.5);transform:non
 
 /* rivelazione */
 @keyframes reveal{from{opacity:0;transform:rotateY(90deg) scale(.9)}to{opacity:1;transform:none}}
-.play-card.reveal{animation:reveal .45s ease-out}
+.play-card.reveal,.slot .card.reveal{animation:reveal .45s ease-out}
+
+/* carta giocata "ispezionabile": click per aprire il popup */
+.slot .card.inspectable{cursor:pointer}
+.slot .card.inspectable::before{content:"🔍";position:absolute;top:3px;right:4px;z-index:6;font-size:.7rem;
+  opacity:.55;filter:drop-shadow(0 1px 1px #000);transition:opacity .15s;pointer-events:none}
+.slot .card.inspectable:hover::before{opacity:1}
+
+/* ===== popup ispeziona carta ===== */
+.card-popup{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .18s ease}
+.card-popup.open{opacity:1}
+.card-popup .cp-back{position:absolute;inset:0;background:rgba(4,3,10,.78);backdrop-filter:blur(3px)}
+.card-popup .cp-body{position:relative;z-index:1;display:flex;gap:1.2rem;align-items:stretch;flex-wrap:wrap;
+  max-width:640px;width:calc(100% - 2rem);max-height:90vh;overflow:auto;padding:1.2rem;
+  background:var(--panel);border:1px solid var(--gold-dim);border-radius:14px;
+  box-shadow:0 0 0 1px rgba(0,0,0,.5) inset,0 24px 60px rgba(0,0,0,.65);
+  transform:translateY(8px) scale(.98);transition:transform .18s ease}
+.card-popup.open .cp-body{transform:none}
+.card-popup .cp-x{position:absolute;top:.5rem;right:.6rem;width:2rem;height:2rem;border-radius:50%;
+  border:1px solid var(--gold-dim);background:rgba(8,5,16,.8);color:var(--gold-bright);font-size:1rem;cursor:pointer}
+.card-popup .cp-x:hover{border-color:var(--gold);background:rgba(26,18,48,.9)}
+.card-popup .cp-card{flex:0 0 190px;max-width:190px}
+.card-popup .cp-card .card{width:100%}
+.card-popup .cp-info{flex:1 1 240px;min-width:220px;display:flex;flex-direction:column;gap:.5rem}
+.card-popup .cp-title{font-family:"Grenze Gotisch","Cinzel",serif;font-size:1.5rem;font-weight:700;
+  letter-spacing:.04em;color:var(--gold-bright);line-height:1.1}
+.card-popup .cp-meta{font-size:.8rem;color:var(--bone);opacity:.75;text-transform:capitalize}
+.card-popup .cp-pt{font-family:"Cinzel",serif;font-size:.95rem;color:var(--bone)}
+.card-popup .cp-pt b{color:var(--gold-bright)}
+.card-popup .cp-abtitle{margin-top:.3rem;font-family:"Cinzel",serif;font-size:.72rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--gold)}
+.card-popup .cp-ablist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.card-popup .cp-ablist li{display:flex;gap:.6rem;align-items:flex-start;
+  background:rgba(196,162,89,.06);border:1px solid var(--line);border-radius:8px;padding:.5rem .6rem}
+.card-popup .cp-ic{font-size:1.25rem;line-height:1;flex:none}
+.card-popup .cp-ab{display:flex;flex-direction:column;gap:.1rem}
+.card-popup .cp-ab b{color:var(--bone);font-size:.92rem}
+.card-popup .cp-d{font-size:.78rem;color:var(--bone);opacity:.72;line-height:1.25}
+.card-popup .cp-none{color:var(--bone);opacity:.6;justify-content:center}
+@media (max-width:560px){
+  .card-popup .cp-card{flex-basis:140px;max-width:140px}
+  .card-popup .cp-title{font-size:1.25rem}
+}
+
+/* ===== ferita "a coltellata": striscia di sangue obliqua che svanisce ===== */
+.blood-slash{position:absolute;inset:0;z-index:9;pointer-events:none;overflow:hidden;border-radius:inherit;
+  animation:bs-fade 1s ease-out forwards}
+.blood-slash::before{content:"";position:absolute;top:6%;left:5%;right:5%;bottom:6%;
+  background:linear-gradient(122deg,transparent 42%,rgba(224,36,26,.9) 47%,#ff5a3c 50%,rgba(224,36,26,.9) 53%,transparent 58%);
+  filter:drop-shadow(0 0 5px rgba(224,36,26,.85));clip-path:inset(0 100% 0 0);
+  animation:bs-cut .26s cubic-bezier(.2,.7,.2,1) forwards}
+.blood-slash::after{content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 62% 40%,rgba(224,36,26,.85) 0,transparent 9%),
+    radial-gradient(circle at 47% 55%,rgba(184,57,44,.8) 0,transparent 7%),
+    radial-gradient(circle at 55% 66%,rgba(224,36,26,.7) 0,transparent 6%);
+  opacity:0;animation:bs-spatter .8s ease-out .18s forwards}
+@keyframes bs-cut{to{clip-path:inset(0 0 0 0)}}
+@keyframes bs-spatter{0%{opacity:0;transform:translateY(-4px)}20%{opacity:1}100%{opacity:0;transform:translateY(6px)}}
+@keyframes bs-fade{0%{opacity:0}10%{opacity:1}68%{opacity:1}100%{opacity:0}}
+.side-bar .vit{position:relative}
+
+/* ===== barra musicale di sottofondo (fixed bottom) — base: player portale3d, tema oro ===== */
+body{padding-bottom:32px}
+.player{position:fixed;left:0;right:0;bottom:0;height:32px;z-index:400;display:flex;align-items:center;gap:12px;
+  padding:0 14px;background:rgba(7,5,15,.94);border-top:1px solid var(--gold-dim);
+  box-shadow:0 -4px 20px rgba(0,0,0,.5);font-family:"Cinzel",serif;backdrop-filter:blur(4px)}
+.player .pbtn{background:none;border:none;color:var(--gold-bright);font-size:13px;cursor:pointer;padding:0 4px;line-height:1}
+.player .pbtn:hover{color:#fff}
+.player .eqm{display:flex;align-items:flex-end;gap:2px;height:14px}
+.player .eqm i{width:3px;background:linear-gradient(var(--gold-bright),var(--gold-dim));animation:eq 1s ease-in-out infinite}
+.player .eqm i:nth-child(2){animation-delay:.25s}.player .eqm i:nth-child(3){animation-delay:.5s}.player .eqm i:nth-child(4){animation-delay:.75s}
+.player .eqm.paused i{animation-play-state:paused;height:4px}
+@keyframes eq{0%,100%{height:3px}50%{height:14px}}
+.player .ptit{flex:1;font-size:12px;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.05em}
+.player .ptit b{color:var(--gold);letter-spacing:.14em;margin-right:8px;font-size:11px}
+.player .vol{display:flex;align-items:center;gap:6px;color:var(--gold-dim);font-size:11px;letter-spacing:.08em}
+.player .vol input{width:80px;height:3px;accent-color:var(--gold);cursor:pointer}
+@media(max-width:560px){body{padding-bottom:44px}.player{height:44px}.player .vol input{width:46px}.player .ptit b{display:none}}
 
 /* ===== risultato ===== */
 .result{margin-top:1.6rem;position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;
@@ -494,6 +710,28 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.5);transform:non
 .w-PLAYER{color:var(--win);font-weight:700} .w-AI{color:var(--lose);font-weight:700} .w-DRAW{color:var(--draw)}
 .result-actions{display:flex;gap:.7rem;margin-top:1.1rem;justify-content:center}
 
+/* ===== preload della battaglia: barra 0-100% finché le immagini del mazzo non sono in cache ===== */
+.preload-overlay[hidden]{display:none}
+.preload-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;
+  background:
+    linear-gradient(180deg, rgba(8,5,16,.92), rgba(8,5,16,.97)),
+    url('/assets/bg/arena.png') center 28% / cover no-repeat fixed,
+    var(--void);
+  opacity:1;transition:opacity .35s ease}
+.preload-overlay.done{opacity:0;pointer-events:none}
+.preload-box{display:flex;flex-direction:column;align-items:center;gap:.6rem;padding:2rem 2.4rem;
+  border:1px solid var(--line);border-radius:14px;background:rgba(14,10,24,.72);
+  box-shadow:0 18px 44px rgba(0,0,0,.6);min-width:min(320px,80vw)}
+.preload-crest{width:2.4rem;height:2.4rem;color:var(--gold);opacity:.85}
+.preload-crest svg{width:100%;height:100%}
+.preload-title{font-family:"Cinzel",serif;letter-spacing:.1em;text-transform:uppercase;
+  font-size:.9rem;color:var(--gold-bright);margin-bottom:.2rem}
+.preload-bar{width:min(280px,70vw);height:8px;border-radius:5px;background:rgba(196,162,89,.12);
+  overflow:hidden;box-shadow:0 0 0 1px var(--line) inset}
+.preload-fill{height:100%;width:0%;border-radius:5px;background:linear-gradient(90deg,var(--gold-dim),var(--gold-bright));
+  transition:width .25s ease}
+.preload-pct{font-family:"Cinzel",serif;font-size:.72rem;letter-spacing:.06em;color:var(--muted)}
+
 /* ===== footer legale ===== */
 .legal{max-width:1180px;margin:2.4rem auto 1rem;padding:1.1rem;color:var(--muted);font-size:.78rem;
   border-top:1px solid var(--line);font-style:italic}
@@ -503,7 +741,21 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.5);transform:non
   body{font-size:16px}
   .hero h1{font-size:2rem}
   .lanes{gap:.5rem}
-  .slot{min-height:130px}
+  .lane-col{padding:.15rem}
+  .slot{min-height:110px;padding:.25rem}
+  /* mobile: carte in corsia e in mano più piccole, footer compattato */
+  .slot .card .card-name{font-size:.56rem}
+  .slot .card .card-cost{width:1.1rem;height:1.1rem;font-size:.75rem}
+  .slot .card .card-footer{display:none} /* sottotipo/rarità: superflui sul tavolo piccolo */
+  .slot .card .card-stats,.hand-card .card-stats{padding:.18rem .3rem}
+  .hand{gap:.45rem}
+  .hand-card{width:88px}
+  .hand-card .card-name{font-size:.56rem}
+  .hand-card .card-cost{width:1.1rem;height:1.1rem;font-size:.75rem}
+  .hand-card .card-footer{display:none}
+  .deck-pile{width:52px;height:74px}
+  .corridor{padding:.45rem .6rem}
+  .corridor .prompt{font-size:1rem;padding:.5rem .7rem}
 }
 
 /* ============================================================
@@ -523,30 +775,230 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.5);transform:non
   .lanes{gap:.7rem}
   .lane-col{padding:.15rem}
   /* l'altezza della piazzola governa tutto */
-  .board .slot{min-height:0;height:clamp(120px,28vh,300px)}
-  /* la carta riempie la piazzola in altezza, larghezza automatica */
+  .board .slot{min-height:0;height:clamp(130px,22vh,240px)}
+  /* la carta standard riempie la piazzola in altezza; larghezza dall'aspect-ratio */
+  .board .slot .card{height:100%;width:auto;max-width:100%;aspect-ratio:3/4}
+  .board .slot .card .card-image{min-height:0}
+  /* legacy .play-card (facedown) */
   .board .slot .play-card{height:100%;width:auto;max-width:100%}
   .board .slot .play-card .pc-img{height:100%;width:auto;max-width:100%;margin:0 auto}
   .board .slot .play-card.facedown{aspect-ratio:488/680;height:100%;width:auto}
   .board .slot .play-card.noimg{height:auto;max-height:100%;min-width:130px}
 
-  /* corridoio compatto */
-  .corridor{padding:.55rem .8rem}
-  .round-bar{margin-bottom:.3rem}
+  /* corridoio compatto: è la voce più alta del tavolo, ogni px conta */
+  .corridor{padding:.35rem .8rem .45rem}
+  .round-bar{margin-bottom:.2rem}
+  .round-tag{padding:.15rem .9rem;font-size:.88rem}
   .lane-tags{margin-bottom:.25rem}
-  .corridor .prompt{margin:.35rem 0;padding:.5rem .9rem;font-size:1.05rem}
+  .corridor .prompt{margin:.25rem auto;padding:.4rem .8rem;font-size:1rem}
+  #next-btn,#pass-btn{margin:.3rem auto 0;padding:.4rem 1rem;font-size:.78rem}
+  .corridor .side-bar .crest{width:36px;height:42px}
+  .corridor .side-bar .crest svg{width:20px;height:20px}
+  .corridor .side-bar .idname{font-size:1.1rem}
+  .corridor .side-bar .meter{height:9px}
+  .corridor .side-bar.foe{padding-bottom:.3rem;margin-bottom:.25rem}
+  .corridor .side-bar.me{padding-top:.3rem;margin-top:.25rem}
 
   /* mano: una riga sola, centrata, scalata sull'altezza */
-  .hand-area{margin-top:.5rem}
-  .hand{flex-wrap:nowrap;justify-content:center;gap:.45rem;margin-top:.35rem}
-  .hand-card{width:clamp(72px,11vh,120px)}
+  .hand-area{margin-top:.35rem}
+  .hand{flex-wrap:nowrap;justify-content:center;gap:.45rem;margin-top:.25rem}
+  .hand-card{width:clamp(70px,9.5vh,110px)}
+  .hand-card .card-footer{display:none} /* sottotipo/rarità superflui in mano: risparmia altezza */
+  .deck-pile{width:56px;height:80px}
 
-  .battle-actions{margin-top:.6rem}
+  .battle-actions{margin-top:.5rem}
 }
 
 /* landscape molto basso (es. notebook 16:9 corti): stringi ancora */
 @media (min-aspect-ratio: 16/10) and (max-height:760px){
-  .board .slot{height:clamp(110px,24vh,230px)}
-  .hand-card{width:clamp(66px,9.5vh,104px)}
-  .corridor .prompt{font-size:1rem}
+  .board .slot{height:clamp(105px,19vh,180px)}
+  .hand-card{width:clamp(60px,8vh,92px)}
+  .corridor .prompt{font-size:.95rem}
+  .side{padding:.3rem .6rem}
 }
+
+/* ===== CARD STANDARD LAYOUT (dappertutto) ===== */
+/* Struttura: header (mana+nome) | image | footer (subtype+rarity) | stats (keywords+pt) */
+
+.card{display:flex;flex-direction:column;position:relative;overflow:hidden;border-radius:8px;
+  background:var(--panel-solid);border:2px solid var(--gold-dim);
+  box-shadow:0 6px 16px rgba(0,0,0,.5);transition:.16s}
+.card:hover{border-color:var(--gold);box-shadow:0 0 16px rgba(196,162,89,.22),0 8px 18px rgba(0,0,0,.5)}
+.card.noimg{min-height:220px}
+
+/* Bordi monocromatici */
+.card.c-W{border-color:rgba(233,223,192,.7)} .card.c-U{border-color:rgba(59,123,209,.7)}
+.card.c-B{border-color:rgba(106,100,112,.7)} .card.c-R{border-color:rgba(212,80,74,.7)}
+.card.c-G{border-color:rgba(63,165,90,.7)} .card.c-C{border-color:rgba(154,160,176,.7)}
+
+/* Bordi bicolore */
+.card.c-WU{border-image:linear-gradient(135deg,rgba(233,223,192,.7),rgba(59,123,209,.7)) 1}
+.card.c-WB{border-image:linear-gradient(135deg,rgba(233,223,192,.7),rgba(106,100,112,.7)) 1}
+.card.c-WR{border-image:linear-gradient(135deg,rgba(233,223,192,.7),rgba(212,80,74,.7)) 1}
+.card.c-WG{border-image:linear-gradient(135deg,rgba(233,223,192,.7),rgba(63,165,90,.7)) 1}
+.card.c-UB{border-image:linear-gradient(135deg,rgba(59,123,209,.7),rgba(106,100,112,.7)) 1}
+.card.c-UR{border-image:linear-gradient(135deg,rgba(59,123,209,.7),rgba(212,80,74,.7)) 1}
+.card.c-UG{border-image:linear-gradient(135deg,rgba(59,123,209,.7),rgba(63,165,90,.7)) 1}
+.card.c-BR{border-image:linear-gradient(135deg,rgba(106,100,112,.7),rgba(212,80,74,.7)) 1}
+.card.c-BG{border-image:linear-gradient(135deg,rgba(106,100,112,.7),rgba(63,165,90,.7)) 1}
+.card.c-RG{border-image:linear-gradient(135deg,rgba(212,80,74,.7),rgba(63,165,90,.7)) 1}
+
+/* HEADER: costo + nome */
+.card-header{display:flex;align-items:center;gap:.4rem;padding:.3rem .4rem;font-family:"Cinzel",serif;
+  background:linear-gradient(180deg,rgba(8,5,16,.85),rgba(8,5,16,.5));border-bottom:1px solid rgba(196,162,89,.2)}
+.card-header.c-W{background:linear-gradient(180deg,rgba(233,223,192,.6),rgba(233,223,192,.25))}
+.card-header.c-U{background:linear-gradient(180deg,rgba(59,123,209,.6),rgba(59,123,209,.25))}
+.card-header.c-B{background:linear-gradient(180deg,rgba(106,100,112,.6),rgba(106,100,112,.25))}
+.card-header.c-R{background:linear-gradient(180deg,rgba(212,80,74,.6),rgba(212,80,74,.25))}
+.card-header.c-G{background:linear-gradient(180deg,rgba(63,165,90,.6),rgba(63,165,90,.25))}
+.card-header.c-C{background:linear-gradient(180deg,rgba(154,160,176,.6),rgba(154,160,176,.25))}
+.card-header.c-WU{background:linear-gradient(90deg,rgba(233,223,192,.6),rgba(59,123,209,.6))}
+.card-header.c-WB{background:linear-gradient(90deg,rgba(233,223,192,.6),rgba(106,100,112,.6))}
+.card-header.c-WR{background:linear-gradient(90deg,rgba(233,223,192,.6),rgba(212,80,74,.6))}
+.card-header.c-WG{background:linear-gradient(90deg,rgba(233,223,192,.6),rgba(63,165,90,.6))}
+.card-header.c-UB{background:linear-gradient(90deg,rgba(59,123,209,.6),rgba(106,100,112,.6))}
+.card-header.c-UR{background:linear-gradient(90deg,rgba(59,123,209,.6),rgba(212,80,74,.6))}
+.card-header.c-UG{background:linear-gradient(90deg,rgba(59,123,209,.6),rgba(63,165,90,.6))}
+.card-header.c-BR{background:linear-gradient(90deg,rgba(106,100,112,.6),rgba(212,80,74,.6))}
+.card-header.c-BG{background:linear-gradient(90deg,rgba(106,100,112,.6),rgba(63,165,90,.6))}
+.card-header.c-RG{background:linear-gradient(90deg,rgba(212,80,74,.6),rgba(63,165,90,.6))}
+
+.card-cost{font-weight:700;font-size:.9rem;color:var(--spectral-soft);width:1.4rem;height:1.4rem;
+  display:grid;place-items:center;background:rgba(8,5,16,.9);border:1px solid var(--gold-dim);border-radius:3px;flex:none}
+.card-name{font-weight:600;font-size:.72rem;letter-spacing:.04em;color:var(--bone);flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 2px #000}
+
+/* IMAGE */
+.card-image{position:relative;background:var(--ink);flex:1;min-height:120px;line-height:0;overflow:hidden}
+.card-image img{width:100%;height:100%;object-fit:cover;display:block}
+.card-image.noimg{display:grid;place-items:center;min-height:140px}
+
+/* FOOTER: sottotipo + rarità */
+.card-footer{display:flex;justify-content:space-between;align-items:center;padding:.3rem .4rem;
+  font-family:"Cinzel",serif;font-size:.68rem;letter-spacing:.02em;
+  background:linear-gradient(180deg,rgba(8,5,16,.85),rgba(8,5,16,.5));
+  border-top:1px solid rgba(196,162,89,.2);border-bottom:1px solid rgba(196,162,89,.2)}
+.card-footer.c-W{background:linear-gradient(180deg,rgba(233,223,192,.6),rgba(233,223,192,.25))}
+.card-footer.c-U{background:linear-gradient(180deg,rgba(59,123,209,.6),rgba(59,123,209,.25))}
+.card-footer.c-B{background:linear-gradient(180deg,rgba(106,100,112,.6),rgba(106,100,112,.25))}
+.card-footer.c-R{background:linear-gradient(180deg,rgba(212,80,74,.6),rgba(212,80,74,.25))}
+.card-footer.c-G{background:linear-gradient(180deg,rgba(63,165,90,.6),rgba(63,165,90,.25))}
+.card-footer.c-C{background:linear-gradient(180deg,rgba(154,160,176,.6),rgba(154,160,176,.25))}
+.card-footer.c-WU{background:linear-gradient(90deg,rgba(233,223,192,.6),rgba(59,123,209,.6))}
+.card-footer.c-WB{background:linear-gradient(90deg,rgba(233,223,192,.6),rgba(106,100,112,.6))}
+.card-footer.c-WR{background:linear-gradient(90deg,rgba(233,223,192,.6),rgba(212,80,74,.6))}
+.card-footer.c-WG{background:linear-gradient(90deg,rgba(233,223,192,.6),rgba(63,165,90,.6))}
+.card-footer.c-UB{background:linear-gradient(90deg,rgba(59,123,209,.6),rgba(106,100,112,.6))}
+.card-footer.c-UR{background:linear-gradient(90deg,rgba(59,123,209,.6),rgba(212,80,74,.6))}
+.card-footer.c-UG{background:linear-gradient(90deg,rgba(59,123,209,.6),rgba(63,165,90,.6))}
+.card-footer.c-BR{background:linear-gradient(90deg,rgba(106,100,112,.6),rgba(212,80,74,.6))}
+.card-footer.c-BG{background:linear-gradient(90deg,rgba(106,100,112,.6),rgba(63,165,90,.6))}
+.card-footer.c-RG{background:linear-gradient(90deg,rgba(212,80,74,.6),rgba(63,165,90,.6))}
+
+.card-subtype{color:var(--bone);flex:1}
+.card-rarity{color:var(--parch);font-style:italic;flex:0 0 auto;margin-left:.4rem}
+
+/* STATS ROW: abilità + power/toughness */
+.card-stats{display:flex;justify-content:space-between;align-items:center;padding:.3rem .4rem;
+  background:rgba(8,5,16,.6);border-top:1px solid rgba(196,162,89,.15)}
+.card-keywords{font-size:.9rem;line-height:1;display:flex;gap:.12em;flex:1}
+.card-keywords span{filter:drop-shadow(0 1px 2px #000)}
+.card-pt{font-family:"Cinzel",serif;font-weight:700;font-size:.8rem;color:var(--spectral-soft)}
+
+/* BOTTONE */
+.card-btn{margin:0;width:100%;border:0;border-radius:0;cursor:pointer;font-family:"Cinzel",serif;
+  font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:.65rem;padding:.3rem;
+  color:#150f08;background:linear-gradient(180deg,#ecd28d,#c4a259);z-index:10}
+.card-btn:hover{background:linear-gradient(180deg,#fff0c4,#d8b86a)}
+
+/* ===================== TUTORIAL (intro + coach) ===================== */
+/* Overlay introduttivo: pannello a slide sopra al campo. */
+/* NB: display:grid/flex forzati qui vincerebbero sull'attributo [hidden] (stile UA a specificità
+   più bassa): senza queste due regole l'overlay non si chiuderebbe più. */
+.tut-intro[hidden],.coach[hidden]{display:none}
+.tut-intro{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:1.2rem;
+  background:rgba(8,5,16,.82);backdrop-filter:blur(3px)}
+.tut-card{position:relative;max-width:540px;width:100%;background:linear-gradient(180deg,rgba(36,23,56,.96),rgba(14,10,24,.98));
+  border:1px solid var(--gold-dim);border-radius:16px;padding:1.6rem 1.5rem 1.3rem;
+  box-shadow:0 0 40px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06)}
+.tut-dots{display:flex;gap:.4rem;justify-content:center;margin-bottom:1rem}
+.tut-dots span{width:8px;height:8px;border-radius:50%;background:var(--gold-dim);opacity:.5;transition:.2s}
+.tut-dots span.on{background:var(--gold-bright);opacity:1;box-shadow:0 0 8px rgba(236,210,141,.6)}
+.tut-title{font-family:"Cinzel",serif;color:var(--gold-bright);text-align:center;font-size:1.4rem;margin:.1rem 0 .8rem}
+.tut-body{color:var(--parch);font-size:1.06rem;line-height:1.6;text-align:center;min-height:7.5rem;margin:0}
+.tut-body b{color:var(--gold-bright)}
+.tut-nav{display:flex;justify-content:space-between;align-items:center;gap:.8rem;margin-top:1.2rem}
+.tut-nav .btn{flex:0 0 auto}
+.tut-skip{display:block;margin:.9rem auto 0;background:none;border:none;color:var(--muted);
+  font-style:italic;font-size:.82rem;cursor:pointer;text-decoration:underline;font-family:inherit}
+.tut-skip:hover{color:var(--gold)}
+
+/* Coach: il MAGO NARRATORE a CENTRO-DESTRA + fumetto a SINISTRA (codina verso destra, al mago).
+   DOM = img poi bolla; row-reverse mette l'img a destra e la bolla a sinistra. */
+.coach{position:fixed;right:1rem;top:50%;transform:translateY(-50%);z-index:45;
+  display:flex;flex-direction:row-reverse;align-items:flex-end;gap:0;
+  max-width:min(560px,72vw);pointer-events:none;animation:coachInR .3s ease-out}
+.coach-mago{height:clamp(150px,34vh,300px);width:auto;flex:0 0 auto;
+  filter:drop-shadow(0 8px 16px rgba(0,0,0,.75));pointer-events:none;user-select:none}
+.coach-bubble{position:relative;pointer-events:auto;margin:0 -.4rem 3rem 0;max-width:min(330px,54vw);
+  background:linear-gradient(180deg,#f5ecd4,#e6d4a6);color:#2a1d0b;
+  border:1px solid #caa84e;border-radius:14px;padding:.75rem 1rem;box-shadow:0 8px 22px rgba(0,0,0,.55)}
+.coach-bubble::before{content:'';position:absolute;right:-13px;bottom:20px;
+  border:7px solid transparent;border-left-color:#ecd9ac;filter:drop-shadow(1px 0 0 #caa84e)}
+.coach-msg{display:block;font-size:1rem;line-height:1.5;padding-right:1.6rem;font-style:normal}
+.coach-msg b{color:#7a5a14}
+.coach-x{position:absolute;top:.4rem;right:.4rem;width:1.7rem;height:1.7rem;border-radius:50%;cursor:pointer;
+  background:linear-gradient(180deg,#ecd28d,#c4a259);color:#150f08;border:none;font-weight:700;font-size:.9rem;
+  box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.coach-x:hover{filter:brightness(1.1)}
+@keyframes coachInR{from{opacity:0;transform:translate(12px,-50%)}to{opacity:1;transform:translate(0,-50%)}}
+
+/* Variante CAMPAGNA: mago in basso a sinistra, fumetto a destra (codina a sinistra verso il mago),
+   così non copre le valli sul lato destro della mappa. */
+.coach.coach-camp{right:auto;left:1rem;top:auto;bottom:1rem;transform:none;
+  flex-direction:row;max-width:min(560px,92vw);animation:coachInL .3s ease-out}
+.coach-camp .coach-mago{height:clamp(120px,26vh,210px)}
+.coach-camp .coach-bubble{margin:0 0 2.2rem -.4rem}
+.coach-camp .coach-bubble::before{left:-13px;right:auto;
+  border-left-color:transparent;border-right-color:#ecd9ac;filter:drop-shadow(-1px 0 0 #caa84e)}
+@keyframes coachInL{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+
+/* Nodo-livello consigliato dal mago sulla mappa campagna: alone dorato pulsante. */
+.map-node.suggested .mn-dot,.hub-step.suggested .hs-dot{
+  border-color:var(--gold-bright)!important;animation:suggestPulse 1.3s ease-in-out infinite}
+@keyframes suggestPulse{
+  0%,100%{box-shadow:0 0 0 2px var(--gold-bright),0 0 10px var(--gold-bright),0 2px 10px rgba(0,0,0,.85)}
+  50%{box-shadow:0 0 0 3px var(--gold-bright),0 0 24px var(--gold-bright),0 2px 10px rgba(0,0,0,.85)}}
+
+/* ============================================================
+   CARD EDITOR / CATALOGO — form e layout admin
+   ============================================================ */
+.ed-label{display:flex;flex-direction:column;font-family:"Cinzel",serif;font-size:.74rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--parch);gap:.3rem;margin-bottom:.6rem}
+.ed-label input,.ed-label select,.ed-label textarea{font-family:"Cormorant Garamond",serif;font-size:1rem;
+  background:var(--panel-solid);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:.5rem .7rem}
+.ed-label input:focus,.ed-label select:focus{outline:none;border-color:var(--gold)}
+.ed-label small{text-transform:none;letter-spacing:0;color:var(--muted);font-size:.82rem}
+.ed-row{display:flex;gap:.8rem;flex-wrap:wrap}
+.ed-row .ed-label{flex:1;min-width:100px}
+.ed-keywords{border:1px solid var(--line);border-radius:8px;padding:.7rem 1rem;margin:.6rem 0;
+  background:rgba(26,18,48,.4)}
+.ed-keywords legend{font-family:"Cinzel",serif;font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--gold);padding:0 .5rem}
+.ed-keywords label{display:inline-flex;align-items:center;gap:.35rem;margin:.3rem .8rem .3rem 0;
+  font-size:.92rem;cursor:pointer;color:var(--bone)}
+.ed-keywords input[type="checkbox"]{accent-color:var(--gold);width:1.1rem;height:1.1rem}
+
+/* catalogo: card read-only senza bottone */
+.catalog-card .mc-btn{display:none}
+.catalog-info{padding:.3rem .6rem;font-size:.8rem;color:var(--muted);text-align:center;
+  border-top:1px solid var(--line);font-style:italic}
+
+/* ===== auth area (topbar) ===== */
+.topbar{flex-wrap:wrap}
+.auth-area{margin-left:auto;display:flex;align-items:center;gap:.5rem}
+.auth-avatar{width:28px;height:28px;border-radius:50%;border:1px solid var(--line)}
+.btn-sm{font-size:.72rem!important;padding:.3rem .7rem!important}
+.nav-sep{color:var(--gold-dim);font-size:.7rem;user-select:none}
+.nav-admin{color:var(--spectral)!important}
+.nav-admin:hover{color:var(--spectral-soft)!important;border-color:rgba(79,207,224,.3)!important;background:rgba(79,207,224,.06)!important}

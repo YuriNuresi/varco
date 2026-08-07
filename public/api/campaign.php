@@ -32,22 +32,49 @@ require_once __DIR__ . '/../../src/http.php';
 require_once __DIR__ . '/../../src/db.php';
 require_once __DIR__ . '/../../src/Engine.php';
 require_once __DIR__ . '/../../src/Scenarios.php';
+require_once __DIR__ . '/../../src/campaign_store.php';
+
+// sessione persa (scaduta su OVH / browser chiuso / altro device)? riprendi dal DB
+campaign_restore_session();
+
+// --- Endpoint GET leggeri (usati dall'editor campagna) ----------------------
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $gAction = (string) ($_GET['action'] ?? '');
+
+    if ($gAction === 'scenarios') {
+        $valley = strtoupper(substr((string) ($_GET['valley'] ?? ''), 0, 1));
+        if (!Scenarios::isValley($valley)) { json_err('Valle non valida'); }
+        $villages = Scenarios::villages($valley);
+        json_out(['ok' => true, 'villages' => $villages]);
+    }
+
+    json_err('Azione GET sconosciuta', 400);
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    json_err('Solo POST', 405);
+    json_err('Solo GET o POST', 405);
 }
 
 $in     = read_input();
-$action = (string) ($in['action'] ?? '');
+$action = (string) ($in['action'] ?? $_GET['action'] ?? '');
 
 function camp(): ?array { return $_SESSION['campaign'] ?? null; }
 
-/** Tutte le creature del colore (Engine::card form). */
-function color_cards(string $color): array
+/** Tutte le creature del colore (Engine::card form). Con $monoOnly esclude le multicolore. */
+function color_cards(string $color, bool $monoOnly = false): array
 {
-    $stmt = db()->prepare('SELECT * FROM ' . TBL_CARDS . ' WHERE enabled = 1 AND colors LIKE ?');
-    $stmt->execute(['%' . $color . '%']);
+    $sql = 'SELECT * FROM ' . TBL_CARDS . " WHERE enabled = 1 AND source = 'custom' AND colors "
+         . ($monoOnly ? '= ?' : 'LIKE ?');
+    $stmt = db()->prepare($sql);
+    $stmt->execute([$monoOnly ? $color : '%' . $color . '%']);
     return array_map([Engine::class, 'card'], $stmt->fetchAll());
+}
+
+/** Pool del DRAFT iniziale: solo carte mono-colore; se sono troppo poche, fallback al pool completo. */
+function initial_draft_pool(string $color): array
+{
+    $mono = color_cards($color, true);
+    return count($mono) >= CAMPAIGN_DRAFT_OPTIONS ? $mono : color_cards($color);
 }
 
 /**
@@ -96,6 +123,41 @@ function empty_progress(): array
     return ['W' => 0, 'U' => 0, 'B' => 0, 'R' => 0, 'G' => 0];
 }
 
+const CAMPAIGN_COLOR_NAMES = ['W' => 'Bianco', 'U' => 'Blu', 'B' => 'Nero', 'R' => 'Rosso', 'G' => 'Verde'];
+
+/**
+ * Salva/aggiorna il mazzo della campagna fra i "Mazzi salvati" (tabella magic_decks), così è
+ * giocabile anche fuori dalla campagna e RIFLETTE le carte vinte: lo richiamiamo a ogni PICK del
+ * draft e a ogni REWARD. Il legame riga<->run vive in $c['deck_db_id'] (mutato qui). Best-effort:
+ * se il DB rifiuta il salvataggio non blocchiamo la campagna. NB: niente vincoli min-size/copie qui
+ * (il mazzo campagna parte piccolo e può avere >2 copie), per questo non passa dall'API decks.php.
+ */
+function sync_campaign_deck(array &$c): void
+{
+    if (empty($c['deck'])) { return; }
+    $ids   = array_values(array_map(static fn($card) => (string) $card['id'], $c['deck']));
+    $color = strtoupper(substr((string) ($c['color'] ?? 'C'), 0, 1));
+    if (!preg_match('/^[WUBRG]$/', $color)) { $color = 'C'; }
+    $name  = '🏔 Campagna ' . (CAMPAIGN_COLOR_NAMES[$color] ?? $color);
+
+    try {
+        if (!empty($c['deck_db_id'])) {
+            $stmt = db()->prepare('UPDATE ' . TBL_DECKS . ' SET card_ids = ?, name = ?, color = ? WHERE id = ?');
+            $stmt->execute([json_encode($ids), $name, $color, (int) $c['deck_db_id']]);
+            // Se la riga esiste ancora (anche con 0 modifiche reali) siamo a posto; se è stata
+            // cancellata a mano (rowCount 0 e assente) ricreiamola sotto.
+            $exists = db()->prepare('SELECT 1 FROM ' . TBL_DECKS . ' WHERE id = ?');
+            $exists->execute([(int) $c['deck_db_id']]);
+            if ($exists->fetchColumn()) { return; }
+        }
+        $stmt = db()->prepare('INSERT INTO ' . TBL_DECKS . ' (name, color, card_ids) VALUES (?, ?, ?)');
+        $stmt->execute([$name, $color, json_encode($ids)]);
+        $c['deck_db_id'] = (int) db()->lastInsertId();
+    } catch (Throwable $e) {
+        // salvataggio mazzo non riuscito: la campagna prosegue comunque
+    }
+}
+
 /** Le 5 valli annotate con lo stato di ogni passo (done/open/locked) in base a progress. */
 function valleys_view(array $progress): array
 {
@@ -131,6 +193,25 @@ function valleys_view(array $progress): array
         ];
     }
     return $out;
+}
+
+/** Riepilogo compatto di UNA run (per la schermata "scegli il tuo valico"). */
+function campaign_summary(array $c): array
+{
+    $progress = $c['progress'] ?? empty_progress();
+    $done = 0;
+    $total = 0;
+    foreach (Scenarios::VALLEYS as $v) {
+        $t = Scenarios::totalSteps($v);
+        $total += $t;
+        $done  += min((int) ($progress[$v] ?? 0), $t);
+    }
+    return [
+        'phase'     => $c['phase'] ?? 'hub',
+        'deck_size' => count($c['deck'] ?? []),
+        'done'      => $done,
+        'total'     => $total,
+    ];
 }
 
 /** Vista JSON dello stato campagna (consumata da campaign.php / campaign.js). */
@@ -189,13 +270,31 @@ function campaign_view(): array
     return $view;
 }
 
+// --- Azione admin: aggiorna levels di uno scenario -------------------------
+if ($action === 'update_scenario') {
+    require_once __DIR__ . '/../../src/auth.php';
+    $key = $_GET['key'] ?? '';
+    if ($key !== INSTALL_KEY && !is_admin()) { json_err('Accesso riservato agli admin', 403); }
+
+    $scId   = $in['id'] ?? null;
+    $levels = $in['levels'] ?? null;
+    if (!$scId || !is_array($levels)) { json_err('id e levels richiesti'); }
+
+    $levelsJson = json_encode($levels, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $stmt = db()->prepare('UPDATE ' . TBL_SCENARIOS . ' SET levels = ? WHERE id = ?');
+    $stmt->execute([$levelsJson, $scId]);
+
+    if ($stmt->rowCount() === 0) { json_err('Scenario non trovato', 404); }
+    json_out(['ok' => true]);
+}
+
 switch ($action) {
 
     case 'NEW': {
         $color = strtoupper(substr((string) ($in['color'] ?? ''), 0, 1));
         if (!in_array($color, ['W', 'U', 'B', 'R', 'G'], true)) { json_err('Colore non valido (W/U/B/R/G)'); }
 
-        $cards = color_cards($color);
+        $cards = initial_draft_pool($color);
         if (count($cards) < CAMPAIGN_DRAFT_OPTIONS) { json_err('Pool insufficiente per il colore ' . $color); }
 
         $opts = draft_options($cards, CAMPAIGN_DRAFT_ANCHORS[0], CAMPAIGN_DRAFT_OPTIONS, false);
@@ -206,6 +305,7 @@ switch ($action) {
             'phase'    => 'drafting',
             'draft'    => ['round' => 1, 'options' => $opts],
         ];
+        campaign_store_save($_SESSION['campaign']);
         json_out(campaign_view());
     }
 
@@ -229,14 +329,16 @@ switch ($action) {
             $round++;
             $anchor = CAMPAIGN_DRAFT_ANCHORS[$round - 1];
             $isLast = ($round === count(CAMPAIGN_DRAFT_ANCHORS));
-            $cards  = color_cards($c['color']);
+            $cards  = initial_draft_pool($c['color']);
             $c['draft'] = ['round' => $round, 'options' => draft_options($cards, $anchor, CAMPAIGN_DRAFT_OPTIONS, $isLast)];
         } else {
             unset($c['draft']);
             $c['phase'] = 'hub'; // draft finito: davanti all'hub delle 5 valli
         }
 
+        sync_campaign_deck($c); // il mazzo è cresciuto: aggiorna il mazzo salvato collegato
         $_SESSION['campaign'] = $c;
+        campaign_store_save($c);
         json_out(campaign_view());
     }
 
@@ -258,6 +360,7 @@ switch ($action) {
         $c['current'] = ['valley' => $valley, 'step' => $step];
         // niente cambio di fase qui: la battaglia (battle.php START) imposterà 'fighting'.
         $_SESSION['campaign'] = $c;
+        campaign_store_save($c);
         json_out(campaign_view());
     }
 
@@ -283,6 +386,7 @@ switch ($action) {
             $c['phase'] = 'hub';
         }
         $_SESSION['campaign'] = $c;
+        campaign_store_save($c);
         json_out(campaign_view());
     }
 
@@ -298,7 +402,9 @@ switch ($action) {
         $c['deck'][] = $found;
         unset($c['reward'], $c['current']);
         $c['phase'] = 'hub';
+        sync_campaign_deck($c); // carta vinta aggiunta: aggiorna il mazzo salvato collegato
         $_SESSION['campaign'] = $c;
+        campaign_store_save($c);
         json_out(campaign_view());
     }
 
@@ -306,8 +412,38 @@ switch ($action) {
         json_out(campaign_view());
     }
 
+    case 'LIST': {
+        $raw = campaign_store_list_raw();
+        $saves = [];
+        foreach (CAMPAIGN_SAVE_COLORS as $col) {
+            $saves[$col] = $raw[$col] !== null ? campaign_summary($raw[$col]) : null;
+        }
+        $active = camp();
+        json_out([
+            'ok'     => true,
+            'saves'  => $saves,
+            'active' => $active ? strtoupper(substr((string) ($active['color'] ?? ''), 0, 1)) : null,
+        ]);
+    }
+
+    case 'SWITCH': {
+        $color = strtoupper(substr((string) ($in['color'] ?? ''), 0, 1));
+        if (!in_array($color, CAMPAIGN_SAVE_COLORS, true)) { json_err('Colore non valido (W/U/B/R/G)'); }
+
+        $c = campaign_store_load($color);
+        if (!$c) { json_err('Nessun salvataggio per questo valico'); }
+        if (($c['phase'] ?? '') === 'fighting') { $c['phase'] = 'hub'; } // la battaglia vive solo in sessione
+
+        $_SESSION['campaign'] = $c;
+        campaign_store_set_active($color);
+        json_out(campaign_view());
+    }
+
     case 'RESET': {
+        $c = camp();
+        $color = $c ? strtoupper(substr((string) ($c['color'] ?? ''), 0, 1)) : null;
         unset($_SESSION['campaign']);
+        if ($color) { campaign_store_save(null, $color); } // cancella solo il salvataggio di QUESTA run
         json_out(['ok' => true, 'phase' => 'none']);
     }
 

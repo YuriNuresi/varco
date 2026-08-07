@@ -10,11 +10,11 @@ require __DIR__ . '/partials/header.php';
 </section>
 
 <section class="card-panel">
-    <h2>🏔 Campagna "Varco"</h2>
-    <p>Scegli un valico (colore), <strong>draftalo il mazzo</strong> (6 carte, ne scegli 2, per fasce di mana)
-       e parti. Dopo ogni battaglia vinta peschi <strong>1 nuova carta su 6</strong>: il mazzo cresce, la valle si fa più dura.</p>
+    <h2>📖 Tutorial — partita guidata</h2>
+    <p>Mai giocato? Parti da qui: una <strong>partita demo</strong> con spiegazioni passo-passo che ti
+       insegnano le 3 corsie, la rivelazione asimmetrica, <strong>Para/Subisci</strong> e i round multipli.</p>
     <div class="quick-play">
-        <a class="btn primary" href="/campaign.php">⚔️ Entra nella valle</a>
+        <a class="btn primary" href="/game.php?tutorial=1">🎓 Inizia il tutorial</a>
     </div>
 </section>
 
@@ -27,6 +27,16 @@ require __DIR__ . '/partials/header.php';
         <a class="deck-chip" href="/game.php?color=B"><span class="deck-color c-B">B</span><span class="deck-name">Nero</span></a>
         <a class="deck-chip" href="/game.php?color=R"><span class="deck-color c-R">R</span><span class="deck-name">Rosso</span></a>
         <a class="deck-chip" href="/game.php?color=G"><span class="deck-color c-G">G</span><span class="deck-name">Verde</span></a>
+    </div>
+</section>
+
+<section class="card-panel">
+    <h2>🏔 Campagna "Varco"</h2>
+    <p>Scegli un valico (colore), <strong>draftalo il mazzo</strong> (6 carte, ne scegli 2, per fasce di mana)
+       e parti. Dopo ogni battaglia vinta peschi <strong>1 nuova carta su 6</strong>: il mazzo cresce, la valle si fa più dura.
+       Il mazzo della campagna viene <strong>salvato fra i tuoi mazzi</strong> e si aggiorna con le carte vinte.</p>
+    <div class="quick-play">
+        <a class="btn primary" href="/campaign.php">⚔️ Entra nella valle</a>
     </div>
 </section>
 

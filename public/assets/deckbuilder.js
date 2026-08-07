@@ -70,6 +70,7 @@ function loadPool() {
   if (searchInp.value.trim() !== '') params.set('q', searchInp.value.trim());
 
   $('#pool').textContent = 'Caricamento…';
+  params.set('source', 'custom');
   fetch('/api/cards.php?' + params.toString())
     .then(r => r.json())
     .then(data => {

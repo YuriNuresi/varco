@@ -51,7 +51,7 @@ if ($method === 'POST') {
     // Verifica che le carte esistano, siano enabled e del colore giusto.
     $ids   = array_values(array_map('strval', $ids));
     $place = implode(',', array_fill(0, count($ids), '?'));
-    $stmt  = db()->prepare('SELECT id, colors FROM ' . TBL_CARDS . " WHERE id IN ($place) AND enabled = 1");
+    $stmt  = db()->prepare('SELECT id, colors FROM ' . TBL_CARDS . " WHERE id IN ($place) AND enabled = 1 AND source = 'custom'");
     $stmt->execute($ids);
     $found = [];
     foreach ($stmt->fetchAll() as $row) {
