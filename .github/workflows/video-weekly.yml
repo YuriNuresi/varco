@@ -77,6 +77,7 @@ jobs:
         run: pip install -r video_studio/requirements-youtube.txt
 
       - name: Pubblica su YouTube
+        id: yt_publish
         if: ${{ env.YT_REFRESH_TOKEN != '' }}
         env:
           YT_CLIENT_ID:     ${{ secrets.YT_CLIENT_ID }}
@@ -84,3 +85,13 @@ jobs:
           YT_PRIVACY:       ${{ vars.YT_PRIVACY }}
         working-directory: video_studio
         run: python youtube_upload.py
+
+      # --- Report a Social Hub (dashboard di stato) ---
+      - name: Report status to Social Hub
+        if: always()
+        run: |
+          curl -s -X POST "https://socialhub.portale3d.it/status_report.php" \
+            -H "Content-Type: application/json" \
+            -H "X-Socialhub-Secret: ${{ secrets.SOCIALHUB_SECRET }}" \
+            -d "{\"source\":\"varco\",\"results\":[{\"platform\":\"youtube\",\"outcome\":\"${{ steps.yt_publish.outcome }}\"}]}" \
+            || true
