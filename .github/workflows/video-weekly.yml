@@ -4,7 +4,7 @@ name: Varco — Weekly Short
 # Usa game-video-studio come submodule (cartella video_studio/).
 #
 # Secret da configurare in questo repo (Settings → Secrets):
-#   MANIFEST_BASE    = https://varco.portale3d.it/video_manifest.php
+#   MANIFEST_BASE    = https://games.portale3d.it/varco/video_manifest.php
 #   MANIFEST_SECRET  = <stessa chiave in magic/.env MANIFEST_SECRET>
 #   YT_CLIENT_ID     = OAuth client id YouTube
 #   YT_CLIENT_SECRET = OAuth client secret YouTube
