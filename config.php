@@ -8,6 +8,11 @@
 
 declare(strict_types=1);
 
+// Nasconde la versione PHP negli header HTTP (in coppia con l'unset in public/.htaccess)
+if (!headers_sent()) {
+    header_remove('X-Powered-By');
+}
+
 // --- Caricamento .env opzionale (solo per comodità in locale) -----------------
 (function (): void {
     // Carica prima il .env di root (condiviso con gli altri giochi su OVH), poi quello locale.
@@ -131,7 +136,7 @@ const CAMPAIGN_LOCANDA = ['heal' => true, 'swap' => 1]; // cura le ferite (già 
 const LOG_BATTLE = true;
 
 // Mostra errori in locale; su OVH conviene disattivarli (impostare a false in produzione).
-const DEBUG = true;
+define('DEBUG', (bool) env('DEBUG', 'false'));
 if (DEBUG) {
     error_reporting(E_ALL);
     ini_set('display_errors', '1');

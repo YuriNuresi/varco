@@ -26,7 +26,7 @@ require __DIR__ . '/partials/header.php';
 /* variante dell'overlay di preload (condiviso con game.php) per lo sfondo della campagna, non l'arena */
 .camp-preload{background:
     radial-gradient(120% 80% at 50% -8%, rgba(42,28,70,.68) 0%, rgba(21,14,40,.80) 42%, rgba(10,6,20,.90) 72%, rgba(6,4,16,.96) 100%),
-    url('/assets/bg/void.png') center top / cover no-repeat fixed,
+    url('assets/bg/void.png') center top / cover no-repeat fixed,
     var(--void)}
 .camp-head{text-align:center;margin-bottom:1.3rem}
 .camp-head h1{font-family:"Cinzel",serif;color:var(--gold-bright);font-size:2.1rem;margin:.2rem 0}
@@ -87,7 +87,7 @@ require __DIR__ . '/partials/header.php';
 .hub-map img{display:block;width:100%;height:auto}
 /* Valle completata: la mappa "devastata" sovrapposta, ritagliata sullo spicchio della valle. */
 .hub-map-ruin{position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:url(/assets/bg/campaign_victory.jpg) center/100% 100% no-repeat}
+  background:url(assets/bg/campaign_victory.jpg) center/100% 100% no-repeat}
 .map-node{position:absolute;transform:translate(-50%,-50%);background:none;border:none;padding:0;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;gap:.18rem;font:inherit;z-index:2;--glow:#ecd28d;
   -webkit-tap-highlight-color:transparent}
@@ -153,5 +153,5 @@ require __DIR__ . '/partials/header.php';
   text-align:center;text-transform:uppercase;font-size:.78rem}
 </style>
 
-<script src="/assets/campaign.js?v=multisave2"></script>
+<script src="assets/campaign.js?v=multisave2"></script>
 <?php require __DIR__ . '/partials/footer.php'; ?>

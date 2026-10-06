@@ -34,5 +34,5 @@ require __DIR__ . '/partials/header.php';
     </section>
 </div>
 
-<script src="/assets/draft.js"></script>
+<script src="assets/draft.js"></script>
 <?php require __DIR__ . '/partials/footer.php'; ?>

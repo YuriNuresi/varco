@@ -10,7 +10,7 @@ if (!is_admin()) {
     echo '<section class="card-panel" style="max-width:420px;margin:4rem auto">
         <h2>Editor campagna</h2>
         <p>Accedi con Google per usare l\'editor.</p>
-        <a href="/auth_google.php?next=/campaign-editor.php" class="btn primary" style="margin-top:1rem;display:inline-block">Accedi con Google</a>
+        <a href="auth_google.php?next=campaign-editor.php" class="btn primary" style="margin-top:1rem;display:inline-block">Accedi con Google</a>
     </section>';
     require __DIR__ . '/partials/footer.php';
     exit;
@@ -124,7 +124,7 @@ let deckCards = [];    // oggetti carta nel mazzo corrente
 async function loadScenarios() {
   const valley = $('#ce-valley').value;
   try {
-    const r = await fetch('/api/campaign.php?action=scenarios&valley=' + valley);
+    const r = await fetch('api/campaign.php?action=scenarios&valley=' + valley);
     const d = await r.json();
     scenarios = d.ok ? (d.villages || d.scenarios || []) : [];
   } catch { scenarios = []; }
@@ -167,7 +167,7 @@ async function loadLevelDeck() {
   if (!ids.length) { deckCards = []; renderDeck(); return; }
 
   try {
-    const r = await fetch('/api/cards.php?ids=' + ids.join(','));
+    const r = await fetch('api/cards.php?ids=' + ids.join(','));
     const d = await r.json();
     if (d.ok) {
       const map = {};
@@ -256,7 +256,7 @@ function loadPool() {
   if (q) p.set('q', q);
 
   $('#ce-pool').textContent = 'Caricamento…';
-  fetch('/api/cards.php?' + p.toString())
+  fetch('api/cards.php?' + p.toString())
     .then(r => r.json())
     .then(d => {
       if (!d.ok) { $('#ce-pool').textContent = 'Errore: ' + d.error; return; }
@@ -281,7 +281,7 @@ $('#ce-save').addEventListener('click', async () => {
   levels[li] = { ...levels[li], card_ids: ids };
 
   try {
-    const r = await fetch('/api/campaign.php?action=update_scenario', {
+    const r = await fetch('api/campaign.php?action=update_scenario', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ id: v.id, levels })

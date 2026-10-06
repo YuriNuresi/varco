@@ -1,15 +1,29 @@
 <?php
 declare(strict_types=1);
 
+// Sotto games.portale3d.it/varco/ il login e' quello COMUNE di portale3d (core/auth.php,
+// tabella p3d_users, sessione P3DSID): stesso account di tutti i giochi. Sul vecchio
+// sottodominio varco.portale3d.it la libreria non c'e' e resta il login di Varco.
+$__varcoCore = rtrim((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''), '/') . '/core/auth.php';
+if (!defined('VARCO_CORE_AUTH')) define('VARCO_CORE_AUTH', is_file($__varcoCore));
+if (VARCO_CORE_AUTH) require_once $__varcoCore;
+
 function auth_start(): void
 {
+    if (VARCO_CORE_AUTH) { p3d_session(); return; }
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
 }
 
+/** Utente loggato come ['email','name','picture'] (+ 'id' p3d_users col login comune), o null. */
 function current_user(): ?array
 {
+    if (VARCO_CORE_AUTH) {
+        $u = p3d_user();
+        return $u ? ['id' => (int) $u['id'], 'email' => (string) $u['email'],
+                     'name' => (string) $u['display_name'], 'picture' => (string) ($u['avatar_url'] ?? '')] : null;
+    }
     auth_start();
     return $_SESSION['varco_user'] ?? null;
 }
@@ -21,6 +35,7 @@ function is_logged_in(): bool
 
 function is_admin(): bool
 {
+    if (VARCO_CORE_AUTH) return p3d_is_admin();
     $user = current_user();
     if (!$user) return false;
     $admins = array_map('trim', explode(',', env('ADMIN_EMAILS', '')));
@@ -39,6 +54,7 @@ function auth_login(string $email, string $name, string $picture): void
 
 function auth_logout(): void
 {
+    if (VARCO_CORE_AUTH) { p3d_logout(); return; }
     auth_start();
     unset($_SESSION['varco_user']);
 }

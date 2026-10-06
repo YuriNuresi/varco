@@ -111,7 +111,7 @@ function slot_role_html(int $lane, string $side): string {
     </div>
 
     <div class="battle-actions">
-        <a href="/index.php" class="btn ghost">← Mazzi</a>
+        <a href="index.php" class="btn ghost">← Mazzi</a>
         <button id="screenshot-btn" class="btn ghost screenshot-btn" title="Cattura uno screenshot 9:16 da inviare alla gallery">📷 Screenshot</button>
     </div>
     <div id="screenshot-toast" class="screenshot-toast" hidden></div>
@@ -125,6 +125,6 @@ function slot_role_html(int $lane, string $side): string {
 <?php endif; ?>
 </section>
 
-<script src="/assets/audio.js?v=dnd7"></script>
-<script src="/assets/app.js?v=preload1"></script>
+<script src="assets/audio.js?v=dnd7"></script>
+<script src="assets/app.js?v=preload1"></script>
 <?php require __DIR__ . '/partials/footer.php'; ?>

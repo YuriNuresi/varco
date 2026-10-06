@@ -90,7 +90,8 @@ if (count($cards) < 2) {
 }
 
 // ── Background: screenshot approvati dagli utenti → bg generati → fallback ───
-$baseUrl     = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
+$baseUrl     = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST']
+            . rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
 $approvedDir = __DIR__ . '/../screenshots/approved';
 $shotFiles   = is_dir($approvedDir) ? glob($approvedDir . '/*.{jpg,jpeg,png}', GLOB_BRACE) : [];
 shuffle($shotFiles); // screenshot utenti (hanno priorità come shot)
