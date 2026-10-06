@@ -279,13 +279,13 @@ function jamendo_track(string $valley, array $tagMap): ?string {
 
 $musicUrl = jamendo_track($valley, $JAMENDO_TAGS);
 
-// Fallback: mp3 locali in magic/assets/music/
+// Fallback: mp3 del player del gioco (public/assets/music/)
 if (!$musicUrl) {
-    $musicDir   = __DIR__ . '/../assets/music';
+    $musicDir   = __DIR__ . '/assets/music';
     $musicFiles = is_dir($musicDir) ? glob($musicDir . '/*.mp3') : [];
     if ($musicFiles) {
         shuffle($musicFiles);
-        $musicUrl = $baseUrl . '/magic/' . ltrim(str_replace(__DIR__ . '/..', '', $musicFiles[0]), '/\\');
+        $musicUrl = $baseUrl . '/assets/music/' . rawurlencode(basename($musicFiles[0]));
     }
 }
 
