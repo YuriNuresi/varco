@@ -1,0 +1,45 @@
+# ============================================================================
+# varco.portale3d.it — security & routing
+# ============================================================================
+
+# Prevent directory listing
+Options -Indexes
+
+# Custom 404 page
+ErrorDocument 404 /404.php
+
+# HTTP → HTTPS redirect
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Force HTTPS for one year (browser-side)
+    Header always set Strict-Transport-Security "max-age=31536000"
+    # Framing: controllato SOLO da frame-ancestors nella CSP qui sotto (anteprima
+    # in iframe su portale3d.it). Niente X-Frame-Options: SAMEORIGIN lo
+    # contraddirebbe e i browser vecchi che ignorano la CSP bloccherebbero l'embed.
+    Header always unset X-Frame-Options
+    # No MIME sniffing
+    Header always set X-Content-Type-Options "nosniff"
+    # Limit referrer leakage
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    # Permissions-Policy: restrict sensitive browser APIs
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+    # Baseline CSP: permissive on https sources to avoid breaking
+    # Google Fonts / inline scripts; tighten once fonts are self-hosted
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:; img-src 'self' https: data: blob:; media-src 'self' https: data: blob:; connect-src 'self' https:; frame-ancestors 'self' https://portale3d.it https://*.portale3d.it; object-src 'none'; base-uri 'self'"
+    # Hide PHP version
+    Header always unset X-Powered-By
+    Header unset X-Powered-By
+</IfModule>
+
+# Never serve dotfiles / env
+<Files ".env">
+    Require all denied
+</Files>
+<Files ".htaccess">
+    Require all denied
+</Files>

@@ -19,8 +19,8 @@ require __DIR__ . '/partials/header.php';
     <div class="end-actions">
         <button id="save-img" class="btn primary">📷 Salva immagine</button>
         <button id="send-img" class="btn">📤 Invia alla gallery</button>
-        <a class="btn" href="/campaign.php">🏔 Campagna</a>
-        <a class="btn" href="/index.php">← Home</a>
+        <a class="btn" href="campaign.php">🏔 Campagna</a>
+        <a class="btn" href="index.php">← Home</a>
         <button id="clear-log" class="btn ghost">🗑 Azzera</button>
     </div>
     <div id="end-toast" class="screenshot-toast" hidden></div>
@@ -103,7 +103,7 @@ require __DIR__ . '/partials/header.php';
     const log = load();
     if (!log.length) {
       body.innerHTML = `<div class="sc-empty">Nessuna partita ancora registrata.<br>
-        <a class="btn primary" href="/campaign.php">Gioca la campagna</a></div>`;
+        <a class="btn primary" href="campaign.php">Gioca la campagna</a></div>`;
       return;
     }
     const wins   = log.filter(m => m.outcome === 'PLAYER').length;
@@ -191,7 +191,7 @@ require __DIR__ . '/partials/header.php';
       fd.append('shot', blob, 'riepilogo.jpg');
       fd.append('round', String(totalRounds()));
       fd.append('deck_id', '0');
-      const resp = await fetch('/screenshot_upload.php', { method: 'POST', body: fd });
+      const resp = await fetch('screenshot_upload.php', { method: 'POST', body: fd });
       const json = await resp.json();
       showToast(json.ok ? '✅ Inviato alla gallery! Grazie 🙏' : ('⚠️ ' + (json.error || 'Errore upload')), 4000);
     } catch (e) {

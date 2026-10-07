@@ -9,7 +9,7 @@ if (!is_admin()) {
     echo '<section class="card-panel" style="max-width:420px;margin:4rem auto">
         <h2>Fucina delle Carte</h2>
         <p>Accedi con Google per usare l\'editor.</p>
-        <a href="/auth_google.php?next=/card-editor.php" class="btn primary" style="margin-top:1rem;display:inline-block">Accedi con Google</a>
+        <a href="auth_google.php?next=card-editor.php" class="btn primary" style="margin-top:1rem;display:inline-block">Accedi con Google</a>
     </section>';
     require __DIR__ . '/partials/footer.php'; exit;
 }
@@ -240,7 +240,7 @@ $pageTitle = 'Fucina delle Carte'; require __DIR__ . '/partials/header.php'; ?>
 
 <script>
 'use strict';
-const API = '/api/cards_admin.php';
+const API = 'api/cards_admin.php';
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const KEYWORDS = ['flying','first_strike','deathtouch','trample','double_strike','lifelink','reach','defender'];

@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /tools/
+Disallow: /partials/
+Disallow: /install.php
+Disallow: /card-editor.php
+Disallow: /campaign-editor.php
+Disallow: /auth_callback.php
+Disallow: /auth_google.php
+Disallow: /auth_logout.php
+
+Sitemap: https://varco.portale3d.it/sitemap.xml

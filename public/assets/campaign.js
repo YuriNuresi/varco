@@ -109,7 +109,7 @@ function withCardPreload(cards, draw){
 }
 
 function api(action, body){
-  return fetch('/api/campaign.php', {
+  return fetch('api/campaign.php', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(Object.assign({ action }, body || {})),
   }).then(r => r.json());
@@ -130,7 +130,7 @@ function render(v){
 function renderError(msg){
   root.innerHTML = `<div class="camp-head"><h1>Ahia</h1>
     <p class="camp-sub">${esc(msg || 'Errore imprevisto.')}</p></div>
-    <div class="camp-bar"><a class="btn" href="/index.php">← Home</a></div>`;
+    <div class="camp-bar"><a class="btn" href="index.php">← Home</a></div>`;
 }
 
 /* --- Bottone "cambia valico", mostrato in ogni fase per saltare a un'altra run --- */
@@ -362,7 +362,7 @@ function renderHub(v){
       <div class="camp-meta"><span>Mazzo <b>${v.color}</b></span><span><b>${v.deck_size}</b> carte</span></div>
     </div>
     <div class="hub-map">
-      <img src="/assets/bg/campaign.jpg" alt="Mappa delle cinque valli">
+      <img src="assets/bg/campaign.jpg" alt="Mappa delle cinque valli">
       ${ruinHtml}
       ${nodesHtml}
     </div>
@@ -380,7 +380,7 @@ function renderHub(v){
     el.onclick = () => {
       el.disabled = true;
       api('ENTER', { valley: el.dataset.valley, step: +el.dataset.step })
-        .then(r => { if (r && r.ok) { location.href = '/game.php?campaign=1'; } else { renderError(r && r.error); } });
+        .then(r => { if (r && r.ok) { location.href = 'game.php?campaign=1'; } else { renderError(r && r.error); } });
     };
   });
   $('#abandon').onclick = abandon;
@@ -391,9 +391,9 @@ function renderHub(v){
 
 /* --- Mago consigliere dell'hub: suggerisce CHI attaccare ed evidenzia il nodo --- */
 const POSE_IMG = {
-  spiega: '/assets/tutor/mago-spiega.png',
-  indica: '/assets/tutor/mago-indica.png',
-  pensa:  '/assets/tutor/mago-pensa.png',
+  spiega: 'assets/tutor/mago-spiega.png',
+  indica: 'assets/tutor/mago-indica.png',
+  pensa:  'assets/tutor/mago-pensa.png',
 };
 let campCoachOff = false; // se l'utente chiude il fumetto, non lo ririproponiamo in questa sessione
 
@@ -533,7 +533,7 @@ function renderFighting(v){
       <p class="camp-sub">Sei nel mezzo di uno scontro: <b>${esc(cur.village_name || '')}</b> — ${esc(cur.level_name || '')}${cur.boss ? ' 👑' : ''} (valle <b>${cur.valley || ''}</b>).</p>
     </div>
     <div class="camp-bar">
-      <a class="btn primary" href="/game.php?campaign=1">↩ Torna alla battaglia</a>
+      <a class="btn primary" href="game.php?campaign=1">↩ Torna alla battaglia</a>
       <button class="btn ghost" id="abandon">Abbandona la run</button>
       ${switchBtnHtml()}
     </div>`;

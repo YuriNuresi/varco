@@ -71,7 +71,7 @@ function loadPool() {
 
   $('#pool').textContent = 'Caricamento…';
   params.set('source', 'custom');
-  fetch('/api/cards.php?' + params.toString())
+  fetch('api/cards.php?' + params.toString())
     .then(r => r.json())
     .then(data => {
       if (!data.ok) { $('#pool').textContent = 'Errore: ' + data.error; return; }
@@ -143,7 +143,7 @@ function saveDeck() {
   const msg  = $('#save-msg');
   if (!name) { msg.textContent = 'Dai un nome al mazzo.'; msg.className = 'msg err'; return; }
   const ids = state.deck.map(c => c.id);
-  fetch('/api/decks.php', {
+  fetch('api/decks.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, color: colorSel.value, card_ids: ids })

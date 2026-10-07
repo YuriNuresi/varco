@@ -28,6 +28,40 @@ require_once __DIR__ . '/../../src/Logger.php';
 require_once __DIR__ . '/../../src/Scenarios.php';
 require_once __DIR__ . '/../../src/campaign_store.php';
 
+// Punti Portale (XP comuni a tutti i giochi): solo su games.portale3d.it, solo utenti loggati.
+$__p3dGames = rtrim((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''), '/') . '/core/games.php';
+if (is_file($__p3dGames)) { require_once $__p3dGames; }
+
+/**
+ * Vittoria contro la CPU -> XP. L'esito arriva dal motore (non dal client), e le chiavi
+ * sono uniche (INSERT IGNORE): campagna = ogni livello una volta sola (5 + passo, +50 a valle
+ * completata); partita libera = 10 punti una volta al giorno per colore/mazzo.
+ */
+function varco_xp_on_end(array $m, string $outcome): void
+{
+    if ($outcome !== Engine::PLAYER || !function_exists('p3d_games_xp')) { return; }
+    try {
+        $player = p3d_games_player();
+        if (!$player) { return; }
+        $cur = $m['camp_cur'] ?? null;
+        if (!empty($m['campaign']) && is_array($cur)) {
+            $v = (string) ($cur['valley'] ?? '');
+            $step = (int) ($cur['step'] ?? 0);
+            if ($step < 1) { return; }
+            p3d_games_xp('varco', "varco:camp:{$v}:{$step}", 5 + $step, "Valle {$v} livello {$step}", $player);
+            if ($step >= count(Scenarios::steps($v))) {
+                p3d_games_xp('varco', "varco:camp:{$v}:done", 50, "Valle {$v} completata", $player);
+            }
+            return;
+        }
+        $bucket = (string) ($m['xp_bucket'] ?? 'duel');
+        $today = date('Y-m-d');
+        p3d_games_xp('varco', "varco:duel:{$today}:{$bucket}", 10, "Vittoria {$bucket} del {$today}", $player);
+    } catch (Throwable $e) {
+        error_log('[varco xp] ' . $e->getMessage());
+    }
+}
+
 // sessione persa fra hub e battaglia? riprendi la campagna dal DB
 campaign_restore_session();
 
@@ -475,6 +509,8 @@ switch ($action) {
             'ai_boons'         => [],
             'boon_pool'        => ['trample', 'flying', 'first_strike', 'deathtouch'],
             'campaign'         => $campaignColor !== null,
+            'camp_cur'         => $campaignColor !== null ? ($_SESSION['campaign']['current'] ?? null) : null,
+            'xp_bucket'        => $deckId > 0 ? 'deck' . $deckId : ($color !== '' ? 'color' . preg_replace('/[^A-Z]/', '', strtoupper($color)) : 'duel'),
         ];
 
         // In campagna: marca lo stato come "in battaglia" (FINISH assegnerà il bottino alla vittoria).
@@ -541,6 +577,7 @@ switch ($action) {
         $detail = resolve_and_apply($m, 0);
         $outcome = battle_outcome($m);
         if ($outcome !== null) {
+            varco_xp_on_end($m, $outcome);
             unset($_SESSION['match']);
             json_out(array_merge(['ok' => true, 'state' => 'DONE', 'lane' => 0,
                 'player_card' => $card, 'ai_card' => $def['card'], 'ai_choice' => $def['choice'],
@@ -586,6 +623,7 @@ switch ($action) {
             $detail  = resolve_pass($m, 1);
             $outcome = battle_outcome($m);
             if ($outcome !== null) {
+                varco_xp_on_end($m, $outcome);
                 unset($_SESSION['match']);
                 json_out(array_merge(['ok' => true, 'state' => 'DONE', 'lane' => 1,
                     'player_card' => null, 'resolution' => $detail,
@@ -616,6 +654,7 @@ switch ($action) {
         $detail = resolve_and_apply($m, 1);
         $outcome = battle_outcome($m);
         if ($outcome !== null) {
+            varco_xp_on_end($m, $outcome);
             unset($_SESSION['match']);
             json_out(array_merge(['ok' => true, 'state' => 'DONE', 'lane' => 1,
                 'player_card' => $card, 'choice' => $choice,
@@ -647,6 +686,7 @@ switch ($action) {
             $detail  = resolve_pass($m, 2);
             $outcome = battle_outcome($m);
             if ($outcome !== null) {
+                varco_xp_on_end($m, $outcome);
                 unset($_SESSION['match']);
                 json_out(array_merge(['ok' => true, 'state' => 'DONE', 'lane' => 2,
                     'ai_card' => $aiCard, 'resolution' => $detail,
@@ -654,6 +694,7 @@ switch ($action) {
             }
             $end = round_end($m);
             if ($end !== null) {
+                varco_xp_on_end($m, $end['outcome']);
                 unset($_SESSION['match']);
                 json_out(array_merge(['ok' => true, 'state' => 'DONE', 'lane' => 2,
                     'ai_card' => $aiCard, 'resolution' => $detail,
@@ -689,6 +730,7 @@ switch ($action) {
         $detail = resolve_and_apply($m, 2);
         $outcome = battle_outcome($m);
         if ($outcome !== null) {
+            varco_xp_on_end($m, $outcome);
             unset($_SESSION['match']);
             json_out(array_merge(['ok' => true, 'state' => 'DONE', 'lane' => 2,
                 'ai_card' => $aiCard, 'resolution' => $detail,
@@ -698,6 +740,7 @@ switch ($action) {
         // Nessun KO: fine round (ricicla/ripesca/fatica) -> deck-out/fatica o round successivo.
         $end = round_end($m);
         if ($end !== null) {
+            varco_xp_on_end($m, $end['outcome']);
             unset($_SESSION['match']);
             json_out(array_merge(['ok' => true, 'state' => 'DONE', 'lane' => 2,
                 'ai_card' => $aiCard, 'resolution' => $detail,

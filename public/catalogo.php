@@ -103,7 +103,7 @@ function loadCatalog() {
   if (q) p.set('q', q);
 
   $('#cat-pool').textContent = 'Caricamento…';
-  fetch('/api/cards.php?' + p.toString())
+  fetch('api/cards.php?' + p.toString())
     .then(r => r.json())
     .then(data => {
       if (!data.ok) { $('#cat-pool').textContent = 'Errore: ' + data.error; return; }

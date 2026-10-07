@@ -39,7 +39,7 @@ function copies(id){ return state.deck.filter(x => x.id === id).length; }
 function openPacks(color) {
   state.color = color;
   $('#draft-msg').textContent = 'Apro le buste…';
-  fetch('/api/draft.php?color=' + color)
+  fetch('api/draft.php?color=' + color)
     .then(r => r.json())
     .then(data => {
       if (!data.ok) { $('#draft-msg').textContent = 'Errore: ' + data.error; return; }
@@ -102,7 +102,7 @@ function removeFromDeck(idx) {
 function saveDeck() {
   const name = $('#deck-name').value.trim();
   if (!name) { flash('Dai un nome al mazzo.'); return; }
-  fetch('/api/decks.php', {
+  fetch('api/decks.php', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, color: state.color, card_ids: state.deck.map(c => c.id) })
   })

@@ -13,7 +13,7 @@
         pVol = document.getElementById('pVol'), pVolN = document.getElementById('pVolN');
 
   const VOL_KEY = 'varco_music_vol', PAUSE_KEY = 'varco_music_paused';
-  const DIR = '/assets/music/';
+  const DIR = 'assets/music/';
   const POOLS = {
     early: [{ f: 'varco1.mp3', t: 'Varco I' },   { f: 'varco2.mp3', t: 'Varco II' }],   // round 1-3
     late:  [{ f: 'varco3.mp3', t: 'Varco III' }, { f: 'varco4.mp3', t: 'Varco IV' }],   // round 4+

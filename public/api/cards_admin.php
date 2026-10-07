@@ -96,7 +96,7 @@ if ($method === 'POST') {
 
         try {
             image_gen_dispatch($job, $absPath);
-            $webUrl = '/' . $relPath;
+            $webUrl = $relPath;
             $provider = defined('IMAGE_PROVIDER') ? IMAGE_PROVIDER : '?';
             json_out(['ok' => true, 'url' => $webUrl, 'provider' => $provider]);
         } catch (Throwable $e) {
@@ -145,7 +145,7 @@ if ($method === 'POST') {
 
         try {
             imagen_generate_one($provider, $job, $absPath);
-            json_out(['ok' => true, 'provider' => $provider, 'url' => '/' . $relPath]);
+            json_out(['ok' => true, 'provider' => $provider, 'url' => $relPath]);
         } catch (Throwable $e) {
             imagen_handle_quota_error($provider, $e->getMessage());   // aggiorna il ledger
             json_out(['ok' => false, 'provider' => $provider, 'error' => $e->getMessage()]);

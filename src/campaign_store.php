@@ -98,7 +98,7 @@ function campaign_store_key(bool $create): ?string
 
 function campaign_store_email(): ?string
 {
-    $email = $_SESSION['varco_user']['email'] ?? null;
+    $email = function_exists('current_user') ? (current_user()['email'] ?? null) : ($_SESSION['varco_user']['email'] ?? null);
     return is_string($email) && $email !== '' ? $email : null;
 }
 

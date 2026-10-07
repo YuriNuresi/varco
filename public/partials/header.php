@@ -7,6 +7,11 @@ require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../src/auth.php';
 $_varcoUser  = current_user();
 $_varcoAdmin = is_admin();
+// URL canonico: la casa di Varco ora e' games.portale3d.it/varco/ (il vecchio sottodominio e' un doppione).
+$_varcoBase  = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+$_varcoPath  = (string) strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+if ($_varcoBase !== '' && str_starts_with($_varcoPath, $_varcoBase . '/')) $_varcoPath = substr($_varcoPath, strlen($_varcoBase));
+$_varcoCanon = 'https://games.portale3d.it/varco' . $_varcoPath;
 
 // --- Faro: tracking server-side (pageview + src, immune adblock). --------------
 // Guardia is_file: in locale (dove Faro non è raggiungibile) è un no-op innocuo.
@@ -18,19 +23,50 @@ if (is_file($faroTrack)) { require_once $faroTrack; faro_track('varco'); }
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= htmlspecialchars($pageTitle) ?> — varco</title>
+    <title><?= htmlspecialchars($pageTitle) ?> — Varco · Gioco di carte a corsie</title>
+    <meta name="description" content="<?= htmlspecialchars($pageDescription ?? 'Varco: gioco di carte strategico 1v1 su 3 corsie asimmetriche. Tutorial, campagna draft, mazzi personalizzati. Progetto fan non commerciale.') ?>">
+    <link rel="canonical" href="<?= htmlspecialchars($_varcoCanon) ?>">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="<?= htmlspecialchars($pageTitle) ?> — Varco">
+    <meta property="og:description" content="<?= htmlspecialchars($pageDescription ?? 'Varco: gioco di carte strategico 1v1 su 3 corsie asimmetriche. Tutorial, campagna draft, mazzi personalizzati.') ?>">
+    <meta property="og:url" content="<?= htmlspecialchars($_varcoCanon) ?>">
+    <meta property="og:site_name" content="Varco">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="<?= htmlspecialchars($pageTitle) ?> — Varco">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": ["WebApplication", "VideoGame"],
+      "name": "Varco",
+      "alternateName": "Battaglia di corsie",
+      "url": "https://games.portale3d.it/varco/",
+      "description": "Varco: gioco di carte strategico 1v1 su 3 corsie asimmetriche. Tutorial, campagna draft, mazzi personalizzati. Progetto fan non commerciale.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "browserRequirements": "Requires JavaScript",
+      "inLanguage": "it",
+      "genre": ["Card game", "Strategy"],
+      "gamePlatform": "Web browser",
+      "playMode": "SinglePlayer",
+      "isAccessibleForFree": true,
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}
+    }
+    </script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Grenze+Gotisch:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/style.css?v=dnd7">
+    <link rel="stylesheet" href="assets/style.css?v=dnd8">
     <!-- Faro: analytics cross-game -->
     <script src="https://portale3d.it/faro/sdk.js" data-app="varco" data-endpoint="https://portale3d.it/faro/collect.php"></script>
     <script>window.faro && faro.track('app_open');</script>
+    <?php if (VARCO_CORE_AUTH) { require_once rtrim((string) $_SERVER['DOCUMENT_ROOT'], '/') . '/core/menu.php'; echo p3d_menu_head(); } ?>
 </head>
 <body class="<?= htmlspecialchars($bodyClass ?? '') ?>">
+<?php if (VARCO_CORE_AUTH) echo p3d_menu('it', 'varco', 'tr'); ?>
 <div class="sky" aria-hidden="true">
     <div class="stars"></div>
-    <svg class="astro" viewBox="0 0 760 760" xmlns="http://www.w3.org/2000/svg">
+    <svg class="astro" viewBox="0 0 760 760" xmlns="http://www.w3.org/2000/svg" role="presentation" aria-hidden="true">
         <g fill="none" stroke="#c4a259" stroke-width="1">
             <circle cx="380" cy="380" r="372"/><circle cx="380" cy="380" r="318"/>
             <circle cx="380" cy="380" r="250"/><circle cx="380" cy="380" r="150"/>
@@ -51,18 +87,18 @@ if (is_file($faroTrack)) { require_once $faroTrack; faro_track('varco'); }
 </div>
 <button class="hamburger" id="hamburger" aria-label="Menu" aria-expanded="false">☰</button>
 <header class="topbar" id="topbar">
-    <a class="brand" href="/index.php">Varco</a>
+    <a class="brand" href="index.php">Varco</a>
     <nav>
-        <a href="/index.php">Soglia</a>
-        <a href="/campaign.php">Campagna</a>
-        <a href="/draft.php">Buste</a>
-        <a href="/deckbuilder.php">Grimorio</a>
-        <a href="/catalogo.php">Catalogo</a>
-        <a href="/end.php">Riepilogo</a>
+        <a href="index.php">Soglia</a>
+        <a href="campaign.php">Campagna</a>
+        <a href="draft.php">Buste</a>
+        <a href="deckbuilder.php">Grimorio</a>
+        <a href="catalogo.php">Catalogo</a>
+        <a href="end.php">Riepilogo</a>
         <?php if ($_varcoAdmin): ?>
             <span class="nav-sep">|</span>
-            <a href="/card-editor.php" class="nav-admin">Fucina</a>
-            <a href="/campaign-editor.php" class="nav-admin">Editor Camp.</a>
+            <a href="card-editor.php" class="nav-admin">Fucina</a>
+            <a href="campaign-editor.php" class="nav-admin">Editor Camp.</a>
         <?php endif; ?>
     </nav>
     <div class="auth-area">
@@ -70,9 +106,9 @@ if (is_file($faroTrack)) { require_once $faroTrack; faro_track('varco'); }
             <?php if ($_varcoUser['picture']): ?>
                 <img src="<?= htmlspecialchars($_varcoUser['picture']) ?>" alt="" class="auth-avatar">
             <?php endif; ?>
-            <a href="/auth_logout.php" class="btn ghost btn-sm">Esci</a>
+            <a href="auth_logout.php" class="btn ghost btn-sm">Esci</a>
         <?php else: ?>
-            <a href="/auth_google.php" class="btn ghost btn-sm">Accedi</a>
+            <a href="auth_google.php" class="btn ghost btn-sm">Accedi</a>
         <?php endif; ?>
     </div>
 </header>

@@ -24,14 +24,14 @@ body{
   font-family:"Cormorant Garamond",Georgia,serif; font-size:18px;
   background:
     radial-gradient(120% 80% at 50% -8%, rgba(42,28,70,.68) 0%, rgba(21,14,40,.80) 42%, rgba(10,6,20,.90) 72%, rgba(6,4,16,.96) 100%),
-    url('/assets/bg/void.png') center top / cover no-repeat fixed,
+    url('bg/void.png') center top / cover no-repeat fixed,
     var(--void);
 }
 /* sfondo specifico della battaglia (generato col motore di Helios) */
 body.page-battle{
   background:
     linear-gradient(180deg, rgba(8,5,16,.80), rgba(8,5,16,.90)),
-    url('/assets/bg/arena.png') center 28% / cover no-repeat fixed,
+    url('bg/arena.png') center 28% / cover no-repeat fixed,
     var(--void);
 }
 a{color:var(--gold-bright);text-decoration:none}
@@ -715,7 +715,7 @@ body{padding-bottom:32px}
 .preload-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;
   background:
     linear-gradient(180deg, rgba(8,5,16,.92), rgba(8,5,16,.97)),
-    url('/assets/bg/arena.png') center 28% / cover no-repeat fixed,
+    url('bg/arena.png') center 28% / cover no-repeat fixed,
     var(--void);
   opacity:1;transition:opacity .35s ease}
 .preload-overlay.done{opacity:0;pointer-events:none}
@@ -1002,3 +1002,6 @@ body{padding-bottom:32px}
 .nav-sep{color:var(--gold-dim);font-size:.7rem;user-select:none}
 .nav-admin{color:var(--spectral)!important}
 .nav-admin:hover{color:var(--spectral-soft)!important;border-color:rgba(79,207,224,.3)!important;background:rgba(79,207,224,.06)!important}
+
+/* menu comune portale3d (pulsante in alto a destra) */
+body:has(> .p3m-tr) .topbar{padding-right:4.2rem}

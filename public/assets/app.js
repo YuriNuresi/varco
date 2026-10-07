@@ -25,7 +25,7 @@ const G = {
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
 function api(action, payload = {}) {
-  return fetch('/api/battle.php', {
+  return fetch('api/battle.php', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(Object.assign({ action }, payload))
   }).then(r => r.text()).then(text => {
@@ -773,7 +773,7 @@ function showFinal(res) {
       <div class="result-actions"><span class="hint">Aggiorno la valle…</span></div>`;
     setPrompt('Battaglia conclusa.');
     box.scrollIntoView({ behavior: 'smooth' });
-    fetch('/api/campaign.php', {
+    fetch('api/campaign.php', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'FINISH', outcome: res.outcome, round: res.round }),
     }).then(r => r.json()).then(cv => {
@@ -781,17 +781,17 @@ function showFinal(res) {
       logMatch(res, cur.level_name ? `Valle ${cur.valley || ''} · ${cur.level_name}` : 'Campagna');
       const won = res.outcome === 'PLAYER';
       const actions = won
-        ? `<a class="btn primary" href="/campaign.php">🎁 Bottino — pesca una carta</a>
-           <a class="btn" href="/end.php">📜 Riepilogo</a>`
+        ? `<a class="btn primary" href="campaign.php">🎁 Bottino — pesca una carta</a>
+           <a class="btn" href="end.php">📜 Riepilogo</a>`
         : `<button class="btn primary" onclick="location.reload()">↻ Riprova la battaglia</button>
-           <a class="btn" href="/campaign.php">🏔 Torna alla valle</a>
-           <a class="btn" href="/end.php">📜 Riepilogo</a>`;
+           <a class="btn" href="campaign.php">🏔 Torna alla valle</a>
+           <a class="btn" href="end.php">📜 Riepilogo</a>`;
       box.querySelector('.result-actions').innerHTML = actions;
     }).catch(() => {
       logMatch(res, 'Campagna');
       box.querySelector('.result-actions').innerHTML =
-        `<a class="btn primary" href="/campaign.php">🏔 Torna alla valle</a>
-         <a class="btn" href="/end.php">📜 Riepilogo</a>`;
+        `<a class="btn primary" href="campaign.php">🏔 Torna alla valle</a>
+         <a class="btn" href="end.php">📜 Riepilogo</a>`;
     });
     return;
   }
@@ -802,8 +802,8 @@ function showFinal(res) {
     <div class="result-banner ${cls}">${title}</div>${scoreHtml}
     <div class="result-actions">
       <button class="btn primary" onclick="location.reload()">↻ Rivincita</button>
-      <a class="btn" href="/end.php">📜 Riepilogo</a>
-      <a class="btn" href="/index.php">← Home</a>
+      <a class="btn" href="end.php">📜 Riepilogo</a>
+      <a class="btn" href="index.php">← Home</a>
     </div>`;
   setPrompt('Battaglia conclusa.');
   box.scrollIntoView({ behavior: 'smooth' });
@@ -869,7 +869,7 @@ function showFinal(res) {
       fd.append('round', String(G.round));
       fd.append('deck_id', String(deckId));
 
-      const resp = await fetch('/screenshot_upload.php', { method: 'POST', body: fd });
+      const resp = await fetch('screenshot_upload.php', { method: 'POST', body: fd });
       const json = await resp.json();
 
       if (json.ok) {
@@ -921,8 +921,8 @@ function tintLane(lane, cls) {
 /* --- Preload: prima di mostrare il tavolo, carica in cache le immagini che serviranno subito
    (sfondi + tutte le carte del mazzo del giocatore), con una barra 0→100%. Niente più "pop-in"
    delle carte a scatti quando la mano viene disegnata. --- */
-const STATIC_PRELOAD = ['/assets/bg/arena.png', '/assets/bg/void.png'];
-if (TUTORIAL) STATIC_PRELOAD.push('/assets/tutor/mago-spiega.png', '/assets/tutor/mago-indica.png', '/assets/tutor/mago-pensa.png');
+const STATIC_PRELOAD = ['assets/bg/arena.png', 'assets/bg/void.png'];
+if (TUTORIAL) STATIC_PRELOAD.push('assets/tutor/mago-spiega.png', 'assets/tutor/mago-indica.png', 'assets/tutor/mago-pensa.png');
 
 function preloadImages(urls, onProgress) {
   const unique = [...new Set(urls.filter(Boolean))];
@@ -1045,9 +1045,9 @@ function showTutIntro() {
 // (onerror) e resta solo il fumetto: il tutorial funziona comunque.
 const tutSeen = new Set();
 const POSE_IMG = {
-  spiega: '/assets/tutor/mago-spiega.png', // libro aperto, accogliente
-  indica: '/assets/tutor/mago-indica.png', // indica col bastone
-  pensa:  '/assets/tutor/mago-pensa.png',  // mano sulla barba, pensieroso
+  spiega: 'assets/tutor/mago-spiega.png', // libro aperto, accogliente
+  indica: 'assets/tutor/mago-indica.png', // indica col bastone
+  pensa:  'assets/tutor/mago-pensa.png',  // mano sulla barba, pensieroso
 };
 function coach(msg, pose) {
   const box = document.getElementById('coach');
